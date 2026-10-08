@@ -1,4 +1,4 @@
-import { createStore, entries, get, set } from 'idb-keyval'
+import { clear, createStore, entries, get, set } from 'idb-keyval'
 
 export type Alarm = 'yes' | 'no' | null
 
@@ -71,6 +71,20 @@ export async function saveNote(note: Note): Promise<Note> {
 export async function allNotes(): Promise<Note[]> {
   const rows = await entries<string, Note>(store)
   return rows.map(([, n]) => n).sort((a, b) => b.date.localeCompare(a.date))
+}
+
+export const deleteAllNotes = () => clear(store)
+
+/**
+ * Asks the browser not to evict notes under storage pressure. iOS may otherwise clear
+ * website data that has not been used for a while.
+ */
+export async function requestPersistence() {
+  try {
+    if (navigator.storage?.persist && !(await navigator.storage.persisted())) await navigator.storage.persist()
+  } catch {
+    // Not supported: notes still work, they are just not marked as persistent.
+  }
 }
 
 export async function downloadBackup() {

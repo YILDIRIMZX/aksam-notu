@@ -64,7 +64,7 @@ jobs:
           hour=$(( 10#$(date +%H) ))
           last=$(git fetch -q origin state 2>/dev/null && git show FETCH_HEAD:last-sent.txt 2>/dev/null || echo none)
           echo "evening=$evening" >> "$GITHUB_OUTPUT"
-          echo "Source: $SOURCE · now: $(date '+%F %H:%M') · evening: $evening · last sent: $last"
+          # The repository is public, so the log says only what was decided, never who triggered it or when.
 
           if [ "$TEST" = "true" ]; then
             echo "Test run: sending without recording."
@@ -73,7 +73,7 @@ jobs:
             echo "Already sent this evening. Nothing to do."
             echo "send=false" >> "$GITHUB_OUTPUT"
           elif [ "$SOURCE" != "schedule" ] && [ "$hour" -lt "$START_HOUR" ] && [ "$hour" -ge 5 ]; then
-            echo "Before $START_HOUR:00. Nothing to do."
+            echo "Outside the evening window. Nothing to do."
             echo "send=false" >> "$GITHUB_OUTPUT"
           else
             echo "send=true" >> "$GITHUB_OUTPUT"

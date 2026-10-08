@@ -24,10 +24,8 @@ try {
 const [owner, repo] = config.repo.split('/')
 webpush.setVapidDetails(VAPID_SUBJECT || `https://${owner.toLowerCase()}.github.io/${repo}/`, config.vapidPublicKey, VAPID_PRIVATE_KEY)
 
-const payload = JSON.stringify({
-  title: 'Akşam Notu',
-  body: 'Yatmadan önce üç satır: açıkta kalan problem, yarın atacağım ilk adım, bugün alarm çaldı mı.',
-})
+// The payload is a fixed sentence: no note content or personal data ever goes through a push service.
+const payload = JSON.stringify(config.reminder)
 
 let delivered = 0
 for (const [i, sub] of subscriptions.entries()) {
