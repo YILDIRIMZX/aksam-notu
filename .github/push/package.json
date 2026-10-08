@@ -1,0 +1,9 @@
+{
+  "name": "aksam-notu-push",
+  "private": true,
+  "type": "module",
+  "description": "Sends the evening reminder as a Web Push notification. Run by .github/workflows/reminder.yml.",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
