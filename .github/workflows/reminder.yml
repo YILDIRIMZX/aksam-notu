@@ -1,0 +1,113 @@
+# Sends the evening reminder at most once per evening.
+# Triggered by the computer shutting down (source: pc), by the 22:00 schedule, or by hand.
+name: Evening reminder
+
+on:
+  schedule:
+    # 21:40 in Istanbul (UTC+3, no daylight saving). Scheduled runs often start late,
+    # so the job starts early and waits until 22:00 itself.
+    - cron: '40 18 * * *'
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Who asked for the reminder
+        type: choice
+        options: [manual, pc, phone]
+        default: manual
+      test:
+        description: Send now and ignore the time window and the once-a-day rule
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  TZ: Europe/Istanbul
+
+jobs:
+  wait:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Wait until 22:00
+        run: |
+          target=$(date -d 'today 22:00' +%s)
+          now=$(date +%s)
+          if [ "$now" -lt "$target" ]; then
+            echo "Waiting $(( target - now )) seconds"
+            sleep $(( target - now ))
+          fi
+
+  send:
+    needs: wait
+    if: ${{ !cancelled() && needs.wait.result != 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # One run at a time, so a shutdown and the 22:00 run can never both send.
+    concurrency:
+      group: reminder
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decide
+        id: decide
+        env:
+          SOURCE: ${{ inputs.source || 'schedule' }}
+          TEST: ${{ inputs.test || false }}
+          START_HOUR: ${{ vars.START_HOUR || '21' }}
+        run: |
+          # An evening lasts until 05:00, so a shutdown at 00:30 still counts for the day before.
+          evening=$(date -d '5 hours ago' +%F)
+          hour=$(( 10#$(date +%H) ))
+          last=$(git fetch -q origin state 2>/dev/null && git show FETCH_HEAD:last-sent.txt 2>/dev/null || echo none)
+          echo "evening=$evening" >> "$GITHUB_OUTPUT"
+          echo "Source: $SOURCE · now: $(date '+%F %H:%M') · evening: $evening · last sent: $last"
+
+          if [ "$TEST" = "true" ]; then
+            echo "Test run: sending without recording."
+            echo "send=true" >> "$GITHUB_OUTPUT"
+          elif [ "$last" = "$evening" ]; then
+            echo "Already sent this evening. Nothing to do."
+            echo "send=false" >> "$GITHUB_OUTPUT"
+          elif [ "$SOURCE" != "schedule" ] && [ "$hour" -lt "$START_HOUR" ] && [ "$hour" -ge 5 ]; then
+            echo "Before $START_HOUR:00. Nothing to do."
+            echo "send=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "send=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.decide.outputs.send == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: .github/push/package-lock.json
+
+      - if: steps.decide.outputs.send == 'true'
+        run: npm ci --prefix .github/push
+
+      - name: Send
+        if: steps.decide.outputs.send == 'true'
+        run: node .github/push/send.mjs
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
+
+      - name: Remember this evening
+        if: steps.decide.outputs.send == 'true' && inputs.test != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENING: ${{ steps.decide.outputs.evening }}
+        run: |
+          # The date lives on a separate one-commit branch, so main's history and Pages stay untouched.
+          dir=$(mktemp -d) && cd "$dir"
+          git init -q
+          echo "$EVENING" > last-sent.txt
+          git add last-sent.txt
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -q -m "Reminder sent for $EVENING"
+          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:state
