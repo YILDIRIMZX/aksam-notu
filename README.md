@@ -4,13 +4,13 @@
 
 # Akşam Notu
 
-**A tiny evening note and reminder app. When the computer shuts down at night, the phone gets one gentle reminder to write three lines before bed.**
+**A tiny evening note and reminder app. When the computer shuts down or goes to sleep at night, the phone gets one gentle reminder to write three lines before bed.**
 
 *Akşam Notu is Turkish for "evening note". A companion app to [İçgörü](https://github.com/YILDIRIMZX/Piskolojik-Destek-Uygulamas-).*
 
 **English** · [Türkçe](README.tr.md) · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-1.0.0-2c6a5d)
+![Version](https://img.shields.io/badge/version-1.1.0-2c6a5d)
 ![React](https://img.shields.io/badge/React-19.3-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-8.3-646cff)
@@ -32,14 +32,14 @@ It is deliberately quiet. There are **no streaks, scores, warnings or guilt-indu
 
 ```mermaid
 flowchart LR
-  PC["Windows PC<br/>shutdown after 21:00<br/>(event 1074)"] -- "workflow_dispatch" --> GA
+  PC["Windows PC<br/>shutdown or sleep after 21:00<br/>(events 1074 · 506)"] -- "workflow_dispatch" --> GA
   Cron["Daily schedule<br/>22:00"] --> GA
   GA["GitHub Actions<br/>reminder.yml<br/>sent this evening?"] -- "Web Push · VAPID" --> Phone["iPhone<br/>Home Screen app"]
   GA -. "date" .-> State[("state branch<br/>last-sent.txt")]
   Phone -- "tap" --> Note["Three boxes"]
 ```
 
-1. **Shutdown trigger.** A Windows scheduled task listens for event 1074, which Windows writes when a shutdown or restart starts. If it is after 21:00, it calls the GitHub API once (about a second) to start the reminder workflow.
+1. **Shutdown and sleep trigger.** A Windows scheduled task listens for event 1074, which Windows writes when a shutdown or restart starts, and for event 506, which marks entering Modern Standby (sleep). Only sleep the user starts counts: closing the lid, the power or sleep button, or Start > Sleep. The screen turning off after idle time does not. Modern Standby keeps the network connected, so the request goes out while the laptop sleeps. If it is after 21:00, it calls the GitHub API once (about a second) to start the reminder workflow.
 2. **One sender.** All reminders are sent by a single GitHub Actions workflow. It checks the date stored on a separate `state` branch and only sends if nothing was sent this evening. Runs are serialized, so a shutdown and the 22:00 run can never both send.
 3. **22:00 safety net.** The workflow also runs on a daily schedule. If no reminder went out by 22:00 (for example, the computer was never switched on), it sends one then. Because scheduled GitHub runs often start late, it starts at 21:40 and waits until 22:00 itself.
 4. **Web Push straight to the app.** The notification is a standard Web Push message signed with VAPID keys. Tapping it opens the note screen. A late-night evening lasts until 05:00, so a shutdown at 00:30 still counts for the day before.
@@ -108,14 +108,14 @@ src/
 └── push/send.mjs           Web Push sender
 pc/
 ├── kur.ps1                 Windows setup (task, encrypted token)
-├── kapanis.ps1             Runs at shutdown, asks GitHub to send
+├── kapanis.ps1             Runs at shutdown or sleep, asks GitHub to send
 └── kaldir.ps1              Uninstall
 push.config.json            Repository name and VAPID public key
 ```
 
 ## Limitations
 
-- **Sleep and hibernate do not count.** Only a real shutdown or restart writes event 1074. A restart after 21:00 also triggers the reminder.
+- **Sleep needs Modern Standby.** Most current laptops use it (check with `powercfg /a`, look for "S0 Low Power Idle"). On older machines with classic S3 sleep only shutdown and restart count. A restart after 21:00 also triggers the reminder, an idle screen-off does not.
 - **Delays.** A shutdown reminder usually arrives within 10-60 seconds. GitHub may start scheduled runs late on busy days, so the 22:00 reminder can occasionally be a few minutes late.
 - **Inactive repositories.** GitHub pauses scheduled workflows in public repositories after 60 days without activity. The daily update of the `state` branch normally keeps it active. If reminders stop, re-enable the workflow in the Actions tab.
 - **One device, one set of notes.** Notes are not synced between phone and computer.

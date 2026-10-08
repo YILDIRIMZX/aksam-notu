@@ -1,10 +1,12 @@
-﻿# Akşam Notu: bilgisayar kapanırken çalışır (Windows olay kaydı 1074) ve GitHub'dan hatırlatmayı göndermesini ister.
+﻿# Akşam Notu: bilgisayar kapanırken (olay 1074) ya da uykuya geçerken (olay 506) çalışır
+# ve GitHub'dan hatırlatmayı göndermesini ister.
 # Asıl "günde bir kez" kuralı GitHub'daki iştedir; buradaki kontroller yalnızca boşuna istek atmamak için.
-param([switch]$Test)
+param([switch]$Test, [string]$EventId = '')
 
 $ErrorActionPreference = 'Stop'
 $dir = Join-Path $env:ProgramData 'AksamNotu'
 $log = Join-Path $dir 'gunluk.txt'
+$what = switch ($EventId) { '1074' { 'Kapanış' } '506' { 'Uyku' } default { 'Tetikleme' } }
 
 function Write-Log($text) {
   Add-Content -Path $log -Value ('{0}  {1}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $text) -Encoding UTF8
@@ -18,8 +20,8 @@ try {
   $lastFile = Join-Path $dir 'son-istek.txt'
 
   if (-not $Test) {
-    if ($now.Hour -lt $cfg.startHour -and $now.Hour -ge 5) { Write-Log "Kapanış $($cfg.startHour):00'dan önce, istek yok."; exit 0 }
-    if ((Test-Path $lastFile) -and (Get-Content $lastFile -Raw).Trim() -eq $evening) { Write-Log 'Bu akşam zaten istendi.'; exit 0 }
+    if ($now.Hour -lt $cfg.startHour -and $now.Hour -ge 5) { Write-Log "$what $($cfg.startHour):00'dan önce, istek yok."; exit 0 }
+    if ((Test-Path $lastFile) -and (Get-Content $lastFile -Raw).Trim() -eq $evening) { Write-Log "$what`: bu akşam zaten istendi."; exit 0 }
   }
 
   Add-Type -AssemblyName System.Security
@@ -29,14 +31,28 @@ try {
 
   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
   $body = @{ ref = 'main'; inputs = @{ source = 'pc'; test = $(if ($Test) { 'true' } else { 'false' }) } } | ConvertTo-Json -Compress
-  Invoke-RestMethod -Method Post `
-    -Uri "https://api.github.com/repos/$($cfg.repo)/actions/workflows/reminder.yml/dispatches" `
-    -Headers @{ Authorization = "Bearer $token"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28'; 'User-Agent' = 'aksam-notu' } `
-    -Body $body -ContentType 'application/json' -TimeoutSec 8 | Out-Null
+  $request = @{
+    Method      = 'Post'
+    Uri         = "https://api.github.com/repos/$($cfg.repo)/actions/workflows/reminder.yml/dispatches"
+    Headers     = @{ Authorization = "Bearer $token"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28'; 'User-Agent' = 'aksam-notu' }
+    Body        = $body
+    ContentType = 'application/json'
+    TimeoutSec  = 8
+  }
+
+  # Uykuya geçerken Wi-Fi bir anlığına kopabilir; birkaç kez dener.
+  for ($try = 1; ; $try++) {
+    try { Invoke-RestMethod @request | Out-Null; break }
+    catch {
+      $code = $_.Exception.Response.StatusCode.value__
+      if ($code -in 401, 403, 404, 422 -or $try -ge 4) { throw }
+      Start-Sleep -Seconds (5 * $try)
+    }
+  }
 
   if (-not $Test) { Set-Content -Path $lastFile -Value $evening }
-  Write-Log $(if ($Test) { 'Test isteği gönderildi.' } else { "Hatırlatma istendi ($evening)." })
+  Write-Log $(if ($Test) { 'Test isteği gönderildi.' } else { "$what`: hatırlatma istendi ($evening)." })
 } catch {
-  Write-Log "Hata: $($_.Exception.Message)"
+  Write-Log "$what`: hata: $($_.Exception.Message)"
   if ($Test) { throw }
 }

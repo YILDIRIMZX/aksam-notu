@@ -6,6 +6,18 @@ Her güncelleme, neyin neden değiştiğiyle birlikte burada listelenir. En yeni
 
 ---
 
+## 1.1.0 (2026-10-08)
+
+**EN.** Sleep now counts as leaving the computer. The user often closes the laptop lid instead of shutting down, and that evening went unnoticed.
+- The Windows task also listens for event 506 (entering Modern Standby), but only when the user starts it: closing the lid, the power or sleep button, or Start > Sleep. The screen turning off after idle time does not count, so sitting nearby with the phone does not trigger a reminder.
+- Modern Standby keeps the network connected, so the request goes out while the laptop sleeps. If the connection drops for a moment, the request is retried a few times.
+- The log now says whether a shutdown or sleep triggered the request.
+
+**TR.** Uyku da artık bilgisayarı bırakmak sayılıyor. Kullanıcı çoğu zaman bilgisayarı kapatmak yerine laptopun kapağını indiriyor ve o akşam fark edilmiyordu.
+- Windows görevi 506 olayını da (Modern Bekleme'ye giriş) dinliyor, ama yalnızca kullanıcı başlattığında: kapağı kapatmak, güç ya da uyku düğmesi, Başlat > Uyku. Boşta kalınca ekranın kapanması sayılmıyor; yani bilgisayarın yanında telefona bakarken hatırlatma gelmiyor.
+- Modern Bekleme ağı bağlı tuttuğu için istek laptop uyurken de gidiyor. Bağlantı bir anlığına koparsa istek birkaç kez yeniden deneniyor.
+- Kayıt dosyası artık isteği kapanışın mı uykunun mu tetiklediğini yazıyor.
+
 ## 1.0.0 (2026-10-08)
 
 **EN.** First release. Built from a between-session assignment: a very simple evening note with a single trigger, kept free of streaks, scores and blame.

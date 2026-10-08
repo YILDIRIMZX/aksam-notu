@@ -40,17 +40,30 @@ if ($askToken) {
   $plain = $null
 }
 
-# Tetikleyici: User32 kaynağından 1074 olayı. Windows bunu kapatma ve yeniden başlatma başlarken yazar.
+# Tetikleyiciler:
+# - User32 1074: kapatma ya da yeniden başlatma başlıyor.
+# - Kernel-Power 506: Modern Bekleme'ye (uyku) giriliyor. Yalnızca kullanıcının uyuttuğu durumlar sayılır:
+#   15 kapak kapandı, 1 güç düğmesi, 14 uyku düğmesi, 20 Başlat > Uyku. Boşta kalınca ekranın kapanması (12) sayılmaz.
+#   Modern Bekleme'de ağ bağlı kalır, istek uyku sırasında da gider.
+$query = @(
+  "*[System[Provider[@Name='User32'] and EventID=1074]]"
+  "*[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and EventID=506] and EventData[Data[@Name='Reason']=15 or Data[@Name='Reason']=1 or Data[@Name='Reason']=14 or Data[@Name='Reason']=20]]"
+) | ForEach-Object { "<Select Path='System'>$_</Select>" }
+$subscription = [Security.SecurityElement]::Escape("<QueryList><Query Id='0' Path='System'>$($query -join '')</Query></QueryList>")
+
 $xml = @"
 <?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
-    <Description>Akşam Notu: bilgisayar kapanırken telefona akşam hatırlatmasını ister.</Description>
+    <Description>Akşam Notu: bilgisayar kapanırken ya da uykuya geçerken telefona akşam hatırlatmasını ister.</Description>
   </RegistrationInfo>
   <Triggers>
     <EventTrigger>
       <Enabled>true</Enabled>
-      <Subscription>&lt;QueryList&gt;&lt;Query Id="0" Path="System"&gt;&lt;Select Path="System"&gt;*[System[Provider[@Name='User32'] and EventID=1074]]&lt;/Select&gt;&lt;/Query&gt;&lt;/QueryList&gt;</Subscription>
+      <Subscription>$subscription</Subscription>
+      <ValueQueries>
+        <Value name="EventID">Event/System/EventID</Value>
+      </ValueQueries>
     </EventTrigger>
   </Triggers>
   <Principals>
@@ -63,13 +76,13 @@ $xml = @"
     <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
     <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
     <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-    <ExecutionTimeLimit>PT1M</ExecutionTimeLimit>
+    <ExecutionTimeLimit>PT2M</ExecutionTimeLimit>
     <Priority>4</Priority>
   </Settings>
   <Actions Context="Author">
     <Exec>
       <Command>powershell.exe</Command>
-      <Arguments>-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "$dir\kapanis.ps1"</Arguments>
+      <Arguments>-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "$dir\kapanis.ps1" -EventId `$(EventID)</Arguments>
     </Exec>
   </Actions>
 </Task>
@@ -77,7 +90,7 @@ $xml = @"
 Register-ScheduledTask -TaskName $taskName -Xml $xml -Force | Out-Null
 
 Write-Host ''
-Write-Host "Kuruldu. Bilgisayar $($StartHour):00'dan sonra kapanınca telefona hatırlatma gidecek." -ForegroundColor Green
+Write-Host "Kuruldu. Bilgisayar $($StartHour):00'dan sonra kapanınca ya da uykuya geçince (kapak kapanınca) telefona hatırlatma gidecek." -ForegroundColor Green
 Write-Host "Kayıtlar: $dir\gunluk.txt"
 if ((Read-Host 'Şimdi bir test bildirimi göndereyim mi? (E/H)') -eq 'E') {
   & (Join-Path $dir 'kapanis.ps1') -Test
