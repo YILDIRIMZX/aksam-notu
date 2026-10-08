@@ -27,12 +27,16 @@ Copy-Item (Join-Path $PSScriptRoot 'kapanis.ps1') $dir -Force
 @{ repo = $Repo; startHour = $StartHour } | ConvertTo-Json | Set-Content (Join-Path $dir 'ayarlar.json') -Encoding UTF8
 
 $tokenFile = Join-Path $dir 'token.dat'
-$askToken = -not (Test-Path $tokenFile)
-if (-not $askToken) { $askToken = (Read-Host 'Kayıtlı bir GitHub anahtarı var. Değiştirmek için E yazıp Enter, geçmek için yalnızca Enter') -eq 'E' }
-if ($askToken) {
-  $secure = Read-Host 'GitHub anahtarını (token) yapıştır ve Enter. Yazarken görünmez' -AsSecureString
-  $plain = [Net.NetworkCredential]::new('', $secure).Password.Trim()
-  if (-not $plain) { throw 'Anahtar boş.' }
+# Tek soru: yapıştırılan değer yeni token olur, boş Enter kayıtlı olanı korur. Yazılan hiçbir şey ekranda görünmez.
+$prompt = if (Test-Path $tokenFile) {
+  'GitHub token''ını yapıştır ve Enter (kayıtlı token''ı korumak için yalnızca Enter). Yazarken görünmez'
+} else {
+  'GitHub token''ını yapıştır ve Enter. Yazarken görünmez'
+}
+$plain = [Net.NetworkCredential]::new('', (Read-Host $prompt -AsSecureString)).Password.Trim()
+if (-not $plain -and -not (Test-Path $tokenFile)) { throw 'Token boş.' }
+if ($plain) {
+  if ($plain -notmatch '^(github_pat_|ghp_)') { Write-Host 'Uyarı: bu bir GitHub token''ına benzemiyor (github_pat_ ile başlamalı).' -ForegroundColor Yellow }
   Add-Type -AssemblyName System.Security
   $sealed = [Security.Cryptography.ProtectedData]::Protect(
     [Text.Encoding]::UTF8.GetBytes($plain), $null, [Security.Cryptography.DataProtectionScope]::LocalMachine)
@@ -93,6 +97,8 @@ Write-Host ''
 Write-Host "Kuruldu. Bilgisayar $($StartHour):00'dan sonra kapanınca ya da uykuya geçince (kapak kapanınca) telefona hatırlatma gidecek." -ForegroundColor Green
 Write-Host "Kayıtlar: $dir\gunluk.txt"
 if ((Read-Host 'Şimdi bir test bildirimi göndereyim mi? (E/H)') -eq 'E') {
+  $global:LASTEXITCODE = 0
   & (Join-Path $dir 'kapanis.ps1') -Test
+  if ($LASTEXITCODE -eq 1) { exit 1 }
   Write-Host 'Test isteği GitHub''a gitti. Bildirim 10-60 saniye içinde telefona gelir.' -ForegroundColor Green
 }

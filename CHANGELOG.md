@@ -6,6 +6,16 @@ Her güncelleme, neyin neden değiştiğiyle birlikte burada listelenir. En yeni
 
 ---
 
+## 1.1.1 (2026-10-08)
+
+**EN.** Fixes from the first real setup on Windows.
+- **One token prompt.** Setup used to ask "type E to change the token" and only then asked for the token. A token pasted into the first question was silently ignored, and the old token kept being used. There is now a single prompt: paste a new token, or press Enter to keep the saved one. Nothing typed is shown on screen.
+- **Clear permission errors.** A 403 from GitHub now says exactly what to check (the repository is selected and Actions is "Read and write"), and 401 says the token is wrong or expired. A failed test no longer prints "sent".
+
+**TR.** Windows'taki ilk gerçek kurulumdan çıkan düzeltmeler.
+- **Tek token sorusu.** Kurulum önce "token'ı değiştirmek için E yaz" diye soruyor, token'ı ancak ondan sonra istiyordu. İlk soruya yapıştırılan token sessizce yok sayılıyor ve eski token kullanılmaya devam ediyordu. Artık tek soru var: yeni token'ı yapıştır ya da kayıtlı olanı korumak için Enter'a bas. Yazılan hiçbir şey ekranda görünmüyor.
+- **Anlaşılır izin hataları.** GitHub'dan gelen 403 artık neye bakılacağını tam olarak söylüyor (repo seçili mi, Actions "Read and write" mı); 401 ise token'ın yanlış ya da süresinin dolmuş olduğunu söylüyor. Başarısız bir test artık "gitti" yazmıyor.
+
 ## 1.1.0 (2026-10-08)
 
 **EN.** Sleep now counts as leaving the computer. The user often closes the laptop lid instead of shutting down, and that evening went unnoticed.

@@ -53,6 +53,13 @@ try {
   if (-not $Test) { Set-Content -Path $lastFile -Value $evening }
   Write-Log $(if ($Test) { 'Test isteği gönderildi.' } else { "$what`: hatırlatma istendi ($evening)." })
 } catch {
-  Write-Log "$what`: hata: $($_.Exception.Message)"
-  if ($Test) { throw }
+  $message = $_.Exception.Message
+  $status = $_.Exception.Response.StatusCode.value__
+  if ($status -eq 403) {
+    $message = "GitHub izin vermedi (403). Token ayarlarında iki şeye bak: Repository access > Only select repositories altında $($cfg.repo) seçili olmalı ve Permissions > Repositories > Actions 'Read and write' olmalı."
+  } elseif ($status -eq 401) {
+    $message = 'GitHub token''ı tanımadı (401): token yanlış kopyalanmış ya da süresi dolmuş. kur.ps1 ile yenisini gir.'
+  }
+  Write-Log "$what`: hata: $message"
+  if ($Test) { Write-Host $message -ForegroundColor Red; exit 1 }
 }
