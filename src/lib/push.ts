@@ -52,8 +52,8 @@ export async function unsubscribe() {
 /** Shows the reminder locally, to check how it looks without going through GitHub. */
 export async function showTestNotification() {
   const reg = await navigator.serviceWorker.ready
-  await reg.showNotification('Akşam Notu', {
-    body: 'Yatmadan önce üç satır: açıkta kalan problem, yarın atacağım ilk adım, bugün alarm çaldı mı.',
+  await reg.showNotification(config.reminder.title, {
+    body: config.reminder.body,
     icon: 'pwa-192.png',
     tag: 'aksam-notu',
   })

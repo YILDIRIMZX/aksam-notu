@@ -1,7 +1,7 @@
-import { ArrowSquareOut, BellRinging, Copy, DownloadSimple } from '@phosphor-icons/react'
+import { ArrowSquareOut, BellRinging, Copy, DownloadSimple, Trash } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import config from '../../push.config.json'
-import { downloadBackup } from '../lib/notes'
+import { deleteAllNotes, downloadBackup } from '../lib/notes'
 import { currentSubscription, pushState, showTestNotification, subscribe, unsubscribe, type PushState } from '../lib/push'
 import { Button, Card, Page, cx, fieldClass } from '../ui'
 
@@ -12,6 +12,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
   const [code, setCode] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
+  const [wipeState, setWipeState] = useState<'idle' | 'confirm' | 'done'>('idle')
 
   useEffect(() => {
     pushState().then(async (s) => {
@@ -35,6 +36,17 @@ export default function Settings({ onBack }: { onBack: () => void }) {
     }
   }
 
+  // Two taps: the first asks, the second deletes. The question resets after a few seconds.
+  async function wipe() {
+    if (wipeState !== 'confirm') {
+      setWipeState('confirm')
+      setTimeout(() => setWipeState((s) => (s === 'confirm' ? 'idle' : s)), 5000)
+      return
+    }
+    await deleteAllNotes()
+    setWipeState('done')
+  }
+
   async function disable() {
     await unsubscribe()
     setCode(null)
@@ -54,9 +66,10 @@ export default function Settings({ onBack }: { onBack: () => void }) {
         <p className="text-[15.5px] leading-relaxed">
           Bilgisayar 21:00'den sonra kapanınca ya da uykuya geçince (kapak kapanınca), en geç de 22:00'de, günde en fazla bir kez şu hatırlatma gelir:
         </p>
-        <p className="mt-3 rounded-field bg-accent-soft px-4 py-3 text-[15px] leading-snug text-accent-deep">
-          Yatmadan önce üç satır: açıkta kalan problem, yarın atacağım ilk adım, bugün alarm çaldı mı.
-        </p>
+        <div className="mt-3 rounded-field bg-accent-soft px-4 py-3 text-[15px] leading-snug text-accent-deep">
+          <p className="font-semibold">{config.reminder.title}</p>
+          <p>{config.reminder.body}</p>
+        </div>
 
         <div className="mt-5">
           {state === 'needs-install' && (
@@ -121,12 +134,21 @@ export default function Settings({ onBack }: { onBack: () => void }) {
       <Card className="mt-4">
         <h2 className="text-[17px] font-[650]">Notların</h2>
         <p className="mt-1 mb-3 text-[14.5px] leading-relaxed text-muted">
-          Notlar yalnızca bu cihazda durur, hiçbir sunucuya gönderilmez. Uygulamayı silersen notlar da silinir.
+          Notlar yalnızca bu cihazda durur, hiçbir sunucuya gönderilmez. Yedek dosyası şifresizdir, güvenli bir yerde sakla.
         </p>
-        <Button variant="secondary" onClick={downloadBackup} className="w-full">
-          <DownloadSimple size={18} />
-          Yedeği indir
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={downloadBackup} className="flex-1">
+            <DownloadSimple size={18} />
+            Yedeği indir
+          </Button>
+          <Button variant="secondary" onClick={wipe} className="flex-1">
+            <Trash size={18} />
+            {wipeState === 'confirm' ? 'Emin misin?' : wipeState === 'done' ? 'Silindi' : 'Tümünü sil'}
+          </Button>
+        </div>
+        {wipeState === 'confirm' && (
+          <p className="mt-2 text-[14px] text-muted">Tüm notlar bu cihazdan kalıcı olarak silinir. Onaylamak için yeniden dokun.</p>
+        )}
       </Card>
 
       <p className="mt-6 text-center text-[13px] text-muted">

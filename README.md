@@ -10,7 +10,7 @@
 
 **English** · [Türkçe](README.tr.md) · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-1.1.1-2c6a5d)
+![Version](https://img.shields.io/badge/version-1.2.0-2c6a5d)
 ![React](https://img.shields.io/badge/React-19.3-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-8.3-646cff)
@@ -22,7 +22,7 @@
 
 ## What it is
 
-Akşam Notu turns one between-session exercise into a habit that costs a minute or two: before bed, write down the problem that is still open, the first step for tomorrow, and whether today's "alarm" went off (a recurring self-critical sentence). The next morning, the app shows last night's note first.
+Akşam Notu turns a short evening check-in into a habit that costs a minute or two: before bed, write down the problem that is still open, the first step for tomorrow, and whether today's "alarm" went off (a recurring self-critical sentence). The next morning, the app shows last night's note first.
 
 It is deliberately quiet. There are **no streaks, scores, warnings or guilt-inducing messages**. Every box may be left empty. The reminder comes **at most once a day** and can be dismissed like any notification.
 
@@ -51,14 +51,19 @@ flowchart LR
 | **Three boxes** | Open problem · First step tomorrow · Did the alarm go off today (yes / no, with an optional sentence). All optional. |
 | **Morning view** | Between 05:00 and 17:00, last night's note is shown at the top. |
 | **History** | Every note, stored by date, newest first. Empty boxes are left out. |
-| **Reminder** | "Yatmadan önce üç satır: açıkta kalan problem, yarın atacağım ilk adım, bugün alarm çaldı mı." At most once per evening. |
-| **Backup** | One-tap JSON export. |
+| **Reminder** | **Yatmadan önce üç satır** · Açıkta kalan problem, yarın atacağım ilk adım, bugün alarm çaldı mı? At most once per evening. |
+| **Backup and delete** | One-tap JSON export. All notes can be deleted from the device with a two-tap confirmation. |
 
-## Privacy
+## Privacy and security
 
-- **Notes never leave the device.** They are stored in the browser's IndexedDB. Nothing is uploaded, not even to GitHub.
-- **The reminder carries no personal data.** The push payload is a fixed sentence. GitHub only stores the date of the last reminder.
-- **Secrets stay secret.** The VAPID private key and the push subscription are GitHub Actions secrets. The Windows token is a fine-grained token limited to this repository and to Actions, stored encrypted with Windows DPAPI in a folder that only SYSTEM and administrators can read.
+- **Notes never leave the device.** They are stored in the browser's IndexedDB. Nothing is uploaded, not even to GitHub. The app asks the browser for persistent storage so that notes are not cleared under storage pressure.
+- **The app cannot send data anywhere.** The published page carries a Content Security Policy that allows connections only to its own address, and there are no third-party scripts, fonts or analytics. Even a faulty dependency could not send notes to another server. Links are opened without a referrer.
+- **You stay in control.** All notes can be deleted in the app with a two-tap confirmation. The backup file is not encrypted, so store it with care.
+- **The reminder carries no personal data.** The push payload is a fixed sentence from `push.config.json`. GitHub only stores the date of the last reminder.
+- **Only you can send notifications to your phone.** Sending needs both the VAPID private key and the phone's subscription. Both are encrypted GitHub Actions secrets: they are never shown in logs and are not available to forks or pull requests. Starting the workflow needs write access to the repository. A notification can only show text; it cannot read anything from the phone.
+- **The Windows token is narrow.** It is a fine-grained token limited to this repository and to Actions, stored encrypted with Windows DPAPI in a folder that only SYSTEM and administrators can read.
+- **What is public.** In a public repository anyone can see when the reminder workflow ran, which roughly shows when the computer was shut down. Logs only say what was decided, never who triggered it. To hide the timing as well, run the reminder workflow from a private repository (the free Actions minutes are enough).
+- **Protect the GitHub account.** Whoever controls the account could change the app's code, so turn on two-factor authentication.
 
 ## Setup
 

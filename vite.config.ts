@@ -1,10 +1,37 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // GitHub Pages serves the app under /<repo>/. Set BASE=/<repo>/ when building for it.
 const base = process.env.BASE ?? '/'
+
+/**
+ * The published app may only talk to its own origin. Even if a dependency misbehaved,
+ * the browser would refuse to send notes anywhere else. Build only: the dev server needs inline scripts.
+ */
+const csp = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data: blob:",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "manifest-src 'self'",
+  "worker-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+].join('; ')
+
+const securityHeaders: Plugin = {
+  name: 'security-meta',
+  apply: 'build',
+  transformIndexHtml: () => [
+    { tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: csp }, injectTo: 'head-prepend' },
+    { tag: 'meta', attrs: { name: 'referrer', content: 'no-referrer' }, injectTo: 'head-prepend' },
+  ],
+}
 
 export default defineConfig({
   base,
@@ -12,6 +39,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    securityHeaders,
     VitePWA({
       // A custom service worker is needed to receive Web Push and open the app from a notification.
       strategies: 'injectManifest',

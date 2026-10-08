@@ -10,7 +10,7 @@
 
 [English](README.md) · **Türkçe** · [Русский](README.ru.md)
 
-![Sürüm](https://img.shields.io/badge/version-1.1.1-2c6a5d)
+![Sürüm](https://img.shields.io/badge/version-1.2.0-2c6a5d)
 ![React](https://img.shields.io/badge/React-19.3-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-8.3-646cff)
@@ -22,7 +22,7 @@
 
 ## Nedir
 
-Akşam Notu, seanslar arası bir ödevi bir iki dakikalık bir alışkanlığa dönüştürür: yatmadan önce açıkta kalan problemi, yarın atılacak ilk adımı ve bugün "alarmın" (tekrarlayan öz eleştirel bir cümle) çalıp çalmadığını yazarsın. Ertesi sabah uygulama önce dün akşamki notu gösterir.
+Akşam Notu, kısa bir akşam değerlendirmesini bir iki dakikalık bir alışkanlığa dönüştürür: yatmadan önce açıkta kalan problemi, yarın atılacak ilk adımı ve bugün "alarmın" (tekrarlayan öz eleştirel bir cümle) çalıp çalmadığını yazarsın. Ertesi sabah uygulama önce dün akşamki notu gösterir.
 
 Bilerek sessiz tasarlandı. **Seri tutma, puan, uyarı ya da suçlayıcı mesaj yoktur.** Her kutu boş bırakılabilir. Hatırlatma **günde en fazla bir kez** gelir ve her bildirim gibi kapatılabilir.
 
@@ -51,14 +51,19 @@ flowchart LR
 | **Üç kutu** | Açıkta kalan problem · Yarın atacağım ilk adım · Bugün alarm çaldı mı (evet / hayır, isteğe bağlı cümleyle). Hepsi isteğe bağlı. |
 | **Sabah görünümü** | 05:00 ile 17:00 arasında dün akşamki not en üstte gösterilir. |
 | **Geçmiş** | Tüm notlar tarihe göre, en yenisi üstte. Boş kutular gösterilmez. |
-| **Hatırlatma** | "Yatmadan önce üç satır: açıkta kalan problem, yarın atacağım ilk adım, bugün alarm çaldı mı." Akşam başına en fazla bir kez. |
-| **Yedek** | Tek dokunuşla JSON dışa aktarma. |
+| **Hatırlatma** | **Yatmadan önce üç satır** · Açıkta kalan problem, yarın atacağım ilk adım, bugün alarm çaldı mı? Akşam başına en fazla bir kez. |
+| **Yedek ve silme** | Tek dokunuşla JSON dışa aktarma. Tüm notlar iki dokunuşluk onayla cihazdan silinebilir. |
 
-## Gizlilik
+## Gizlilik ve güvenlik
 
-- **Notlar cihazdan çıkmaz.** Tarayıcının IndexedDB'sinde saklanır. Hiçbir yere, GitHub'a bile yüklenmez.
-- **Hatırlatma kişisel veri taşımaz.** Bildirim içeriği sabit bir cümledir. GitHub yalnızca son hatırlatmanın tarihini tutar.
-- **Gizli bilgiler gizli kalır.** VAPID özel anahtarı ve bildirim aboneliği GitHub Actions gizli değerleridir. Windows'taki anahtar yalnızca bu repoya ve Actions'a yetkili, ince ayarlı bir token'dır; Windows DPAPI ile şifrelenip yalnızca SYSTEM ve yöneticilerin okuyabildiği bir klasörde saklanır.
+- **Notlar cihazdan çıkmaz.** Tarayıcının IndexedDB'sinde saklanır. Hiçbir yere, GitHub'a bile yüklenmez. Uygulama, notların depolama sıkışıklığında silinmemesi için tarayıcıdan kalıcı depolama ister.
+- **Uygulama hiçbir yere veri gönderemez.** Yayınlanan sayfada yalnızca kendi adresine bağlantıya izin veren bir İçerik Güvenlik Politikası (CSP) vardır; üçüncü taraf betik, yazı tipi ya da analiz aracı yoktur. Hatalı bir bağımlılık bile notları başka bir sunucuya gönderemez. Bağlantılar yönlendiren bilgisi (referrer) olmadan açılır.
+- **Kontrol sende.** Tüm notlar uygulamada iki dokunuşluk onayla silinebilir. Yedek dosyası şifresizdir, dikkatli sakla.
+- **Hatırlatma kişisel veri taşımaz.** Bildirim içeriği `push.config.json` içindeki sabit bir cümledir. GitHub yalnızca son hatırlatmanın tarihini tutar.
+- **Telefonuna yalnızca sen bildirim gönderebilirsin.** Göndermek için hem VAPID özel anahtarı hem telefonun aboneliği gerekir. İkisi de şifreli GitHub Actions gizli değerleridir: kayıtlarda asla görünmez, fork'lara ve pull request'lere açılmaz. İşi başlatmak için repoya yazma yetkisi gerekir. Bir bildirim yalnızca yazı gösterebilir, telefondan hiçbir şey okuyamaz.
+- **Windows token'ı dar yetkilidir.** Yalnızca bu repoya ve Actions'a yetkili, ince ayarlı bir token'dır; Windows DPAPI ile şifrelenip yalnızca SYSTEM ve yöneticilerin okuyabildiği bir klasörde saklanır.
+- **Herkese açık olan.** Herkese açık bir repoda hatırlatma işinin ne zaman çalıştığını herkes görebilir; bu da bilgisayarın kabaca ne zaman kapatıldığını gösterir. Kayıtlar yalnızca ne karar verildiğini yazar, kimin tetiklediğini asla. Zamanı da gizlemek için hatırlatma işi gizli (private) bir repodan çalıştırılabilir (ücretsiz Actions dakikaları yeter).
+- **GitHub hesabını koru.** Hesabı ele geçiren biri uygulamanın kodunu değiştirebilir; iki adımlı doğrulamayı (2FA) aç.
 
 ## Kurulum
 
