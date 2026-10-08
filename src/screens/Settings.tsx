@@ -52,7 +52,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
     <Page title="Bildirim" onBack={onBack}>
       <Card>
         <p className="text-[15.5px] leading-relaxed">
-          Bilgisayar 21:00'den sonra kapanınca ya da en geç 22:00'de, günde en fazla bir kez şu hatırlatma gelir:
+          Bilgisayar 21:00'den sonra kapanınca ya da uykuya geçince (kapak kapanınca), en geç de 22:00'de, günde en fazla bir kez şu hatırlatma gelir:
         </p>
         <p className="mt-3 rounded-field bg-accent-soft px-4 py-3 text-[15px] leading-snug text-accent-deep">
           Yatmadan önce üç satır: açıkta kalan problem, yarın atacağım ilk adım, bugün alarm çaldı mı.

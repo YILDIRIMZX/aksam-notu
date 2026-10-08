@@ -4,13 +4,13 @@
 
 # Akşam Notu
 
-**Küçük bir akşam notu ve hatırlatma uygulaması. Bilgisayar gece kapanınca telefona, yatmadan önce üç satır yazmayı hatırlatan tek bir nazik bildirim gelir.**
+**Küçük bir akşam notu ve hatırlatma uygulaması. Bilgisayar gece kapanınca ya da uykuya geçince telefona, yatmadan önce üç satır yazmayı hatırlatan tek bir nazik bildirim gelir.**
 
 *[İçgörü](https://github.com/YILDIRIMZX/Piskolojik-Destek-Uygulamas-)'nün yardımcı uygulamasıdır.*
 
 [English](README.md) · **Türkçe** · [Русский](README.ru.md)
 
-![Sürüm](https://img.shields.io/badge/version-1.0.0-2c6a5d)
+![Sürüm](https://img.shields.io/badge/version-1.1.0-2c6a5d)
 ![React](https://img.shields.io/badge/React-19.3-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-8.3-646cff)
@@ -32,14 +32,14 @@ Bilerek sessiz tasarlandı. **Seri tutma, puan, uyarı ya da suçlayıcı mesaj 
 
 ```mermaid
 flowchart LR
-  PC["Windows bilgisayar<br/>21:00 sonrası kapanış<br/>(olay 1074)"] -- "workflow_dispatch" --> GA
+  PC["Windows bilgisayar<br/>21:00 sonrası kapanış ya da uyku<br/>(olay 1074 · 506)"] -- "workflow_dispatch" --> GA
   Cron["Günlük zamanlayıcı<br/>22:00"] --> GA
   GA["GitHub Actions<br/>reminder.yml<br/>bu akşam gönderildi mi?"] -- "Web Push · VAPID" --> Phone["iPhone<br/>ana ekran uygulaması"]
   GA -. "tarih" .-> State[("state dalı<br/>last-sent.txt")]
   Phone -- "dokun" --> Note["Üç kutu"]
 ```
 
-1. **Kapanış tetikleyicisi.** Bir Windows zamanlanmış görevi, Windows'un kapatma ya da yeniden başlatma başlarken yazdığı 1074 olayını dinler. Saat 21:00'i geçtiyse GitHub API'sine tek bir istek atar (yaklaşık bir saniye) ve hatırlatma işini başlatır.
+1. **Kapanış ve uyku tetikleyicisi.** Bir Windows zamanlanmış görevi, Windows'un kapatma ya da yeniden başlatma başlarken yazdığı 1074 olayını ve Modern Bekleme'ye (uyku) girişi gösteren 506 olayını dinler. Yalnızca kullanıcının başlattığı uyku sayılır: kapağı kapatmak, güç ya da uyku düğmesi, Başlat > Uyku. Boşta kalınca ekranın kapanması sayılmaz. Modern Bekleme ağı bağlı tuttuğu için istek laptop uyurken de gider. Saat 21:00'i geçtiyse GitHub API'sine tek bir istek atar (yaklaşık bir saniye) ve hatırlatma işini başlatır.
 2. **Tek gönderici.** Tüm hatırlatmaları tek bir GitHub Actions işi gönderir. İş, ayrı bir `state` dalında tutulan tarihe bakar ve yalnızca bu akşam henüz gönderilmediyse gönderir. Çalışmalar sırayla yürür, bu yüzden bir kapanış ile 22:00 çalışması asla ikisi birden göndermez.
 3. **22:00 güvencesi.** İş her gün belirli bir saatte de çalışır. 22:00'ye kadar hatırlatma gitmediyse (örneğin bilgisayar hiç açılmadıysa) o zaman gönderir. GitHub'ın zamanlanmış işleri sık sık geç başladığından iş 21:40'ta başlar ve 22:00'yi kendisi bekler.
 4. **Doğrudan uygulamaya Web Push.** Bildirim, VAPID anahtarlarıyla imzalanmış standart bir Web Push mesajıdır. Dokununca not ekranı açılır. Bir akşam 05:00'e kadar sürer, yani 00:30'daki kapanış bir önceki güne sayılır.
@@ -108,14 +108,14 @@ src/
 └── push/send.mjs           Web Push gönderici
 pc/
 ├── kur.ps1                 Windows kurulumu (görev, şifreli token)
-├── kapanis.ps1             Kapanışta çalışır, GitHub'dan göndermesini ister
+├── kapanis.ps1             Kapanışta ya da uykuda çalışır, GitHub'dan göndermesini ister
 └── kaldir.ps1              Kaldırma
 push.config.json            Repo adı ve VAPID açık anahtarı
 ```
 
 ## Sınırlamalar
 
-- **Uyku ve hazırda bekletme sayılmaz.** 1074 olayını yalnızca gerçek kapatma ya da yeniden başlatma yazar. 21:00'den sonra yeniden başlatma da hatırlatmayı tetikler.
+- **Uyku için Modern Bekleme gerekir.** Güncel laptopların çoğu bunu kullanır (`powercfg /a` çıktısında "S0 Low Power Idle" yazmalı). Klasik S3 uykulu eski bilgisayarlarda yalnızca kapatma ve yeniden başlatma sayılır. 21:00'den sonra yeniden başlatma da hatırlatmayı tetikler, boşta ekranın kapanması tetiklemez.
 - **Gecikmeler.** Kapanış hatırlatması genellikle 10-60 saniyede gelir. GitHub yoğun günlerde zamanlanmış işleri geç başlatabilir, bu yüzden 22:00 hatırlatması ara sıra birkaç dakika gecikebilir.
 - **Hareketsiz repolar.** GitHub, herkese açık repolarda 60 gün hareket olmazsa zamanlanmış işleri durdurur. `state` dalının günlük güncellemesi normalde repoyu hareketli tutar. Hatırlatmalar durursa işi Actions sekmesinden yeniden etkinleştir.
 - **Tek cihaz, tek not seti.** Notlar telefon ile bilgisayar arasında eşitlenmez.
