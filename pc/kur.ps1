@@ -165,6 +165,52 @@ $xml = @"
 "@
 Register-ScheduledTask -TaskName $taskName -Xml $xml -Force | Out-Null
 
+# --- İzleyici (oturum açılınca başlar, arka planda pencere açmadan çalışır) ---
+# Modern Bekleme uykuya girince yeni program başlatmaz; uykuya bağlı görev ancak uyanınca çalışır.
+# İzleyici zaten çalıştığı için ekran kapanırken ya da kapak kapanırken isteği uykudan önce gönderir.
+$watcherName = "$taskName izleyici"
+$watcherXml = @"
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Akşam Notu: ekran kapanırken ya da kapak kapanırken akşam hatırlatmasını uykudan önce ister.</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+      <UserId>$($me.User.Value)</UserId>
+    </LogonTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>$($me.User.Value)</UserId>
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <RestartOnFailure>
+      <Interval>PT1M</Interval>
+      <Count>10</Count>
+    </RestartOnFailure>
+    <Priority>5</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>conhost.exe</Command>
+      <Arguments>--headless powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$script" -Trigger watch</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+"@
+Stop-ScheduledTask -TaskName $watcherName -ErrorAction SilentlyContinue
+Register-ScheduledTask -TaskName $watcherName -Xml $watcherXml -Force | Out-Null
+Start-ScheduledTask -TaskName $watcherName
+
 # --- Doğrulama ---
 $logoffKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Logoff'
 # Yalnızca Parameters okunur: Windows aynı anahtarda PowerShell'in çeviremediği bir ExecTime değeri tutuyor.
