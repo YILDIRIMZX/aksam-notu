@@ -10,7 +10,7 @@
 
 [English](README.md) · **Türkçe** · [Русский](README.ru.md)
 
-![Sürüm](https://img.shields.io/badge/version-1.2.0-2c6a5d)
+![Sürüm](https://img.shields.io/badge/version-1.3.0-2c6a5d)
 ![React](https://img.shields.io/badge/React-19.3-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-8.3-646cff)
@@ -32,16 +32,16 @@ Bilerek sessiz tasarlandı. **Seri tutma, puan, uyarı ya da suçlayıcı mesaj 
 
 ```mermaid
 flowchart LR
-  PC["Windows bilgisayar<br/>21:00 sonrası kapanış ya da uyku<br/>(olay 1074 · 506)"] -- "workflow_dispatch" --> GA
+  PC["Windows bilgisayar<br/>21:00 sonrası kapanış, yeniden başlatma ya da uyku<br/>(oturum kapatma betiği · olay 506)"] -- "workflow_dispatch" --> GA
   Cron["Günlük zamanlayıcı<br/>22:00"] --> GA
   GA["GitHub Actions<br/>reminder.yml<br/>bu akşam gönderildi mi?"] -- "Web Push · VAPID" --> Phone["iPhone<br/>ana ekran uygulaması"]
   GA -. "tarih" .-> State[("state dalı<br/>last-sent.txt")]
   Phone -- "dokun" --> Note["Üç kutu"]
 ```
 
-1. **Kapanış ve uyku tetikleyicisi.** Bir Windows zamanlanmış görevi, Windows'un kapatma ya da yeniden başlatma başlarken yazdığı 1074 olayını ve Modern Bekleme'ye (uyku) girişi gösteren 506 olayını dinler. Yalnızca kullanıcının başlattığı uyku sayılır: kapağı kapatmak, güç ya da uyku düğmesi, Başlat > Uyku. Boşta kalınca ekranın kapanması sayılmaz. Modern Bekleme ağı bağlı tuttuğu için istek laptop uyurken de gider. Saat 21:00'i geçtiyse GitHub API'sine tek bir istek atar (yaklaşık bir saniye) ve hatırlatma işini başlatır.
+1. **Kapanış ve uyku tetikleyicisi.** Windows kapanışta her zaman bir olay yazmıyor ve kapanmadan önceki son saniye bir ağ isteği için çok kısa. Bu yüzden kapatma ve yeniden başlatmayı bir **oturum kapatma betiği** (yerel Grup İlkesi) yakalar: Windows onu her kapatma ve yeniden başlatmada çalıştırır ve bitmesini bekler. Uykuyu, 506 olayını (Modern Bekleme'ye giriş) dinleyen bir zamanlanmış görev yakalar, ama yalnızca kullanıcı başlattığında: kapağı kapatmak, güç ya da uyku düğmesi, Başlat > Uyku. Boşta kalınca ekranın kapanması sayılmaz. Saat 21:00'i geçtiyse betik GitHub API'sine tek bir istek atar (yaklaşık bir saniye) ve **bilgisayarın yerel saatini UTC farkıyla birlikte** gönderir (ör. `2026-10-09T23:19:30+03:00`). GitHub kararı isteğin ulaştığı ana göre değil bu saate göre verir ve 90 dakikadan eski bir isteği yok sayar.
 2. **Tek gönderici.** Tüm hatırlatmaları tek bir GitHub Actions işi gönderir. İş, ayrı bir `state` dalında tutulan tarihe bakar ve yalnızca bu akşam henüz gönderilmediyse gönderir. Çalışmalar sırayla yürür, bu yüzden bir kapanış ile 22:00 çalışması asla ikisi birden göndermez.
-3. **22:00 güvencesi.** İş her gün belirli bir saatte de çalışır. 22:00'ye kadar hatırlatma gitmediyse (örneğin bilgisayar hiç açılmadıysa) o zaman gönderir. GitHub'ın zamanlanmış işleri sık sık geç başladığından iş 21:40'ta başlar ve 22:00'yi kendisi bekler.
+3. **22:00 güvencesi.** İş zamanlanmış olarak da çalışır. 22:00'ye kadar hatırlatma gitmediyse (örneğin bilgisayar hiç açılmadıysa) gönderir. GitHub zamanlanmış işleri bazen saatlerce geç başlatabildiği için üç çalışma var (21:40, 22:00, 22:20) ve zamanlanmış bir çalışma yalnızca 22:00 ile 23:30 arasında gönderir. Daha geç başlayan çalışma hiçbir şey yapmaz; böylece hatırlatma asla gece yarısı gelmez.
 4. **Doğrudan uygulamaya Web Push.** Bildirim, VAPID anahtarlarıyla imzalanmış standart bir Web Push mesajıdır. Dokununca not ekranı açılır. Bir akşam 05:00'e kadar sürer, yani 00:30'daki kapanış bir önceki güne sayılır.
 
 ## Özellikler
@@ -61,7 +61,7 @@ flowchart LR
 - **Kontrol sende.** Tüm notlar uygulamada iki dokunuşluk onayla silinebilir. Yedek dosyası şifresizdir, dikkatli sakla.
 - **Hatırlatma kişisel veri taşımaz.** Bildirim içeriği `push.config.json` içindeki sabit bir cümledir. GitHub yalnızca son hatırlatmanın tarihini tutar.
 - **Telefonuna yalnızca sen bildirim gönderebilirsin.** Göndermek için hem VAPID özel anahtarı hem telefonun aboneliği gerekir. İkisi de şifreli GitHub Actions gizli değerleridir: kayıtlarda asla görünmez, fork'lara ve pull request'lere açılmaz. İşi başlatmak için repoya yazma yetkisi gerekir. Bir bildirim yalnızca yazı gösterebilir, telefondan hiçbir şey okuyamaz.
-- **Windows token'ı dar yetkilidir.** Yalnızca bu repoya ve Actions'a yetkili, ince ayarlı bir token'dır; Windows DPAPI ile şifrelenip yalnızca SYSTEM ve yöneticilerin okuyabildiği bir klasörde saklanır.
+- **Windows token'ı dar yetkilidir.** Yalnızca bu repoya ve Actions'a yetkili, ince ayarlı bir token'dır. Kullanıcının kendi profil klasöründe, yalnızca o Windows hesabının çözebileceği şekilde Windows DPAPI ile şifrelenmiş olarak saklanır. Oturum kapatma betiğinin kendisi yalnızca yöneticilerin değiştirebildiği bir klasördedir.
 - **Herkese açık olan.** Herkese açık bir repoda hatırlatma işinin ne zaman çalıştığını herkes görebilir; bu da bilgisayarın kabaca ne zaman kapatıldığını gösterir. Kayıtlar yalnızca ne karar verildiğini yazar, kimin tetiklediğini asla. Zamanı da gizlemek için hatırlatma işi gizli (private) bir repodan çalıştırılabilir (ücretsiz Actions dakikaları yeter).
 - **GitHub hesabını koru.** Hesabı ele geçiren biri uygulamanın kodunu değiştirebilir; iki adımlı doğrulamayı (2FA) aç.
 
@@ -73,7 +73,7 @@ Bir GitHub hesabı, iOS 16.4 veya üstü bir iPhone (ya da Web Push destekleyen 
 2. **VAPID anahtarları.** `npx web-push generate-vapid-keys` çalıştır. Açık anahtarı ve `sahip/repo` adını [`push.config.json`](push.config.json) dosyasına yaz; özel anahtarı **`VAPID_PRIVATE_KEY`** adlı Actions gizli değeri olarak kaydet (**Settings > Secrets and variables > Actions**).
 3. **Telefon.** Siteyi Safari'de aç, **Paylaş > Ana Ekrana Ekle**'yi seç, uygulamayı ana ekrandan aç, **Bildirim**'e gir ve **Bildirimleri aç**'a dokun. Gösterilen kodu kopyalayıp **`PUSH_SUBSCRIPTIONS`** gizli değeri olarak kaydet. Birden fazla cihaz için kodları bir JSON dizisinde birleştir.
 4. **Token.** Yalnızca bu repoya erişimi olan ve **Actions: Read and write** iznine sahip bir [ince ayarlı kişisel erişim token'ı](https://github.com/settings/personal-access-tokens/new) oluştur.
-5. **Windows.** `pc\kur.ps1` dosyasını çalıştır (yönetici izni ister), sorulunca token'ı yapıştır ve bir test bildirimi gönder. `pc\kaldir.ps1` her şeyi geri kaldırır.
+5. **Windows.** `pc\kur.ps1` dosyasını çalıştır (yönetici izni ister; yönetici, kullandığın hesabın kendisi olmalı), sorulunca token'ı yapıştır ve bir test bildirimi gönder. Önceki bir kurulumu da yükseltir ve token'ını korur. `pc\kaldir.ps1` her şeyi geri kaldırır.
 6. **İsteğe bağlı.** 21:00'i değiştirmek için `START_HOUR` adlı Actions değişkenini ayarla. İstediğin an hatırlatma göndermek için **Actions > Evening reminder > Run workflow**'u "test" işaretli başlatabilirsin.
 
 ## Teknoloji
@@ -113,7 +113,7 @@ src/
 └── push/send.mjs           Web Push gönderici
 pc/
 ├── kur.ps1                 Windows kurulumu (görev, şifreli token)
-├── kapanis.ps1             Kapanışta ya da uykuda çalışır, GitHub'dan göndermesini ister
+├── kapanis.ps1             Oturum kapatma betiği ve uyku görevi, yerel saati GitHub'a gönderir
 └── kaldir.ps1              Kaldırma
 push.config.json            Repo adı ve VAPID açık anahtarı
 ```
@@ -121,7 +121,7 @@ push.config.json            Repo adı ve VAPID açık anahtarı
 ## Sınırlamalar
 
 - **Uyku için Modern Bekleme gerekir.** Güncel laptopların çoğu bunu kullanır (`powercfg /a` çıktısında "S0 Low Power Idle" yazmalı). Klasik S3 uykulu eski bilgisayarlarda yalnızca kapatma ve yeniden başlatma sayılır. 21:00'den sonra yeniden başlatma da hatırlatmayı tetikler, boşta ekranın kapanması tetiklemez.
-- **Gecikmeler.** Kapanış hatırlatması genellikle 10-60 saniyede gelir. GitHub yoğun günlerde zamanlanmış işleri geç başlatabilir, bu yüzden 22:00 hatırlatması ara sıra birkaç dakika gecikebilir.
+- **Gecikmeler ve atlanan akşamlar.** Kapanış hatırlatması genellikle 10-60 saniyede gelir. GitHub üç zamanlanmış çalışmanın hepsini 23:30'dan sonra başlatırsa o akşamki 22:00 hatırlatması gece gönderilmek yerine atlanır.
 - **Hareketsiz repolar.** GitHub, herkese açık repolarda 60 gün hareket olmazsa zamanlanmış işleri durdurur. `state` dalının günlük güncellemesi normalde repoyu hareketli tutar. Hatırlatmalar durursa işi Actions sekmesinden yeniden etkinleştir.
 - **Tek cihaz, tek not seti.** Notlar telefon ile bilgisayar arasında eşitlenmez.
 - **Süresi dolan abonelikler.** iOS aboneliği düşürürse (örneğin uygulama silinince) iş bunu bildirir. Uygulamada bildirimi kapatıp açarak yeni kodu yapıştır.
