@@ -6,6 +6,12 @@ Her güncelleme, neyin neden değiştiğiyle birlikte burada listelenir. En yeni
 
 ---
 
+## 1.3.1 (2026-10-10)
+
+**EN.** Setup stopped at its final check with "Specified cast is not valid", after everything had already been installed. Windows keeps an `ExecTime` value next to the logoff script that PowerShell cannot convert, and the check read every value. It now reads only the script's parameters.
+
+**TR.** Kurulum, her şey zaten kurulduktan sonra son kontrolde "Belirtilen atama geçerli değil" hatasıyla duruyordu. Windows oturum kapatma betiğinin yanında PowerShell'in çeviremediği bir `ExecTime` değeri tutuyor ve kontrol tüm değerleri okuyordu. Artık yalnızca betiğin parametrelerini okuyor.
+
 ## 1.3.0 (2026-10-10)
 
 **EN.** Reminders came at the wrong time: at 02:32 and 03:12 instead of the evening, and a shutdown sent nothing.
