@@ -125,8 +125,9 @@ Set-LogoffScript $true
 
 # --- Uyku görevi (senin hesabınla, pencere açmadan) ---
 # Kernel-Power 506: Modern Bekleme'ye giriş. Yalnızca kullanıcının uyuttuğu durumlar sayılır:
-# 15 kapak kapandı, 1 güç düğmesi, 14 uyku düğmesi, 20 Başlat > Uyku. Boşta kalınca ekranın kapanması (12) sayılmaz.
-$query = "<QueryList><Query Id='0' Path='System'><Select Path='System'>*[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and EventID=506] and EventData[Data[@Name='Reason']=15 or Data[@Name='Reason']=1 or Data[@Name='Reason']=14 or Data[@Name='Reason']=20]]</Select></Query></QueryList>"
+# 15 kapak kapandı, 1 güç düğmesi, 14 uyku düğmesi, 20 Başlat > Uyku, 11 ekranı kapatma isteği (bazı bilgisayarlarda uyku menüsü ve düğmeler bunu yazar).
+# Boşta kalınca ekranın kendiliğinden kapanması (12) sayılmaz.
+$query = "<QueryList><Query Id='0' Path='System'><Select Path='System'>*[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and EventID=506] and EventData[Data[@Name='Reason']=15 or Data[@Name='Reason']=1 or Data[@Name='Reason']=14 or Data[@Name='Reason']=20 or Data[@Name='Reason']=11]]</Select></Query></QueryList>"
 $subscription = [Security.SecurityElement]::Escape($query)
 $xml = @"
 <?xml version="1.0" encoding="UTF-16"?>
