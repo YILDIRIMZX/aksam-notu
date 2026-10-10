@@ -6,6 +6,20 @@ Her güncelleme, neyin neden değiştiğiyle birlikte burada listelenir. En yeni
 
 ---
 
+## 1.5.0 (2026-10-10)
+
+**EN.** The 1.4.0 watcher noticed the sleep at the right second, but Windows froze it in the middle of the request, and the reminder still only arrived at wake-up. In Modern Standby, programs in the user's session are frozen within the first seconds of sleep; system processes are not.
+- **The watcher now runs under the SYSTEM account** from start-up and listens for the sleep event itself. The event states why the computer is going to sleep, so there is no more guessing from keyboard activity: the lid, the power or sleep button and Start > Sleep count, the screen turning off after idle time does not.
+- The request carries the time of the sleep event. If it is still delayed until a later wake-up, GitHub ignores it as more than 90 minutes old instead of sending it in the morning.
+- For the watcher, a copy of the token is encrypted for the computer and kept in a folder that only SYSTEM and administrators can read. Its log contains no secrets and can be read by the user.
+- The user-session watcher and the backup sleep task were removed. Shutdown and restart are still handled by the logoff script.
+
+**TR.** 1.4.0 izleyicisi uykuyu doğru saniyede fark etti ama Windows onu isteğin ortasında dondurdu; hatırlatma yine ancak uyanınca geldi. Modern Bekleme'de kullanıcı oturumundaki programlar uykunun ilk saniyelerinde donduruluyor, sistem süreçleri dondurulmuyor.
+- **İzleyici artık açılıştan itibaren SYSTEM hesabıyla çalışıyor** ve uyku olayını kendisi dinliyor. Olay bilgisayarın neden uyuduğunu yazdığı için klavye etkinliğinden tahmin yürütmeye gerek kalmadı: kapak, güç ya da uyku düğmesi ve Başlat > Uyku sayılıyor; boşta kalınca ekranın kapanması sayılmıyor.
+- İstek, uyku olayının saatini taşıyor. Yine de sonraki bir uyanışa kadar gecikirse GitHub onu sabah göndermek yerine 90 dakikadan eski diye yok sayıyor.
+- İzleyici için token'ın bir kopyası bilgisayara göre şifrelenip yalnızca SYSTEM ve yöneticilerin okuyabildiği bir klasörde tutuluyor. Kayıt dosyası sır içermiyor ve kullanıcı tarafından okunabiliyor.
+- Kullanıcı oturumundaki izleyici ve yedek uyku görevi kaldırıldı. Kapatma ve yeniden başlatmayı yine oturum kapatma betiği yakalıyor.
+
 ## 1.4.0 (2026-10-10)
 
 **EN.** After putting the computer to sleep, the reminder only came when the computer was woken up. Once Modern Standby has started, Windows does not start new programs until wake-up, so the task triggered by the sleep event could only run then.
