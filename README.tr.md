@@ -10,7 +10,7 @@
 
 [English](README.md) · **Türkçe** · [Русский](README.ru.md)
 
-![Sürüm](https://img.shields.io/badge/version-1.4.0-2c6a5d)
+![Sürüm](https://img.shields.io/badge/version-1.5.0-2c6a5d)
 ![React](https://img.shields.io/badge/React-19.3-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-8.3-646cff)
@@ -39,7 +39,7 @@ flowchart LR
   Phone -- "dokun" --> Note["Üç kutu"]
 ```
 
-1. **Kapanış ve uyku tetikleyicisi.** Windows kapanışta her zaman bir olay yazmıyor ve kapanmadan önceki son saniye bir ağ isteği için çok kısa. Bu yüzden kapatma ve yeniden başlatmayı bir **oturum kapatma betiği** (yerel Grup İlkesi) yakalar: Windows onu her kapatma ve yeniden başlatmada çalıştırır ve bitmesini bekler. Uykuyu, oturum açılınca başlayan küçük bir arka plan **izleyicisi** yakalar. Windows, ekran kapanırken ya da kapak kapanırken bunu çalışan programlara bilgisayar uyumadan önce bildirir; Modern Bekleme başladıktan sonra ise uyanışa kadar yeni program başlatmaz, bu yüzden uyku olayına bağlı bir görev ancak sabah çalışabilir. İzleyici, kapak kapandıysa ya da son 30 saniyede klavye veya fare kullanıldıysa (Başlat > Uyku, güç düğmesi) hemen gönderir. Aksi halde Windows'un yazdığı uyku nedenine bakar; boşta kalınca ekranın kapanması sayılmaz. Uyku olayına (506) bağlı bir görev de yedek olarak durur. Saat 21:00'i geçtiyse betik GitHub API'sine tek bir istek atar (yaklaşık bir saniye) ve **bilgisayarın yerel saatini UTC farkıyla birlikte** gönderir (ör. `2026-10-09T23:19:30+03:00`). GitHub kararı isteğin ulaştığı ana göre değil bu saate göre verir ve 90 dakikadan eski bir isteği yok sayar.
+1. **Kapanış ve uyku tetikleyicisi.** Windows kapanışta her zaman bir olay yazmıyor ve kapanmadan önceki son saniye bir ağ isteği için çok kısa. Bu yüzden kapatma ve yeniden başlatmayı bir **oturum kapatma betiği** (yerel Grup İlkesi) yakalar: Windows onu her kapatma ve yeniden başlatmada çalıştırır ve bitmesini bekler. Uykuyu, açılıştan itibaren SYSTEM hesabıyla çalışan ve uyku olayını (Kernel-Power 506) dinleyen küçük bir **izleyici** yakalar. Modern Bekleme'de kullanıcı oturumundaki programlar uykunun ilk saniyelerinde dondurulur ve uyanışa kadar yeni program başlatılmaz; sistem süreçleri ise çalışmaya devam eder ve ağ bağlı kalır, bu yüzden istek bilgisayar uykuya dalarken gider. Olay, bilgisayarın neden uyuduğunu da yazar: kapak, güç ya da uyku düğmesi ve Başlat > Uyku sayılır; boşta kalınca ekranın kapanması sayılmaz. İzleyici için token'ın bir kopyası bilgisayara göre şifrelenip yalnızca SYSTEM ve yöneticilerin okuyabildiği bir klasörde tutulur. Saat 21:00'i geçtiyse betik GitHub API'sine tek bir istek atar (yaklaşık bir saniye) ve **bilgisayarın yerel saatini UTC farkıyla birlikte** gönderir (ör. `2026-10-09T23:19:30+03:00`). GitHub kararı isteğin ulaştığı ana göre değil bu saate göre verir ve 90 dakikadan eski bir isteği yok sayar.
 2. **Tek gönderici.** Tüm hatırlatmaları tek bir GitHub Actions işi gönderir. İş, ayrı bir `state` dalında tutulan tarihe bakar ve yalnızca bu akşam henüz gönderilmediyse gönderir. Çalışmalar sırayla yürür, bu yüzden bir kapanış ile 22:00 çalışması asla ikisi birden göndermez.
 3. **22:00 güvencesi.** İş zamanlanmış olarak da çalışır. 22:00'ye kadar hatırlatma gitmediyse (örneğin bilgisayar hiç açılmadıysa) gönderir. GitHub zamanlanmış işleri bazen saatlerce geç başlatabildiği için üç çalışma var (21:40, 22:00, 22:20) ve zamanlanmış bir çalışma yalnızca 22:00 ile 23:30 arasında gönderir. Daha geç başlayan çalışma hiçbir şey yapmaz; böylece hatırlatma asla gece yarısı gelmez.
 4. **Doğrudan uygulamaya Web Push.** Bildirim, VAPID anahtarlarıyla imzalanmış standart bir Web Push mesajıdır. Dokununca not ekranı açılır. Bir akşam 05:00'e kadar sürer, yani 00:30'daki kapanış bir önceki güne sayılır.
@@ -113,23 +113,4 @@ src/
 └── push/send.mjs           Web Push gönderici
 pc/
 ├── kur.ps1                 Windows kurulumu (görev, şifreli token)
-├── kapanis.ps1             İzleyici, oturum kapatma betiği ve yedek uyku görevi; yerel saati GitHub'a gönderir
-└── kaldir.ps1              Kaldırma
-push.config.json            Repo adı ve VAPID açık anahtarı
-```
-
-## Sınırlamalar
-
-- **Uyku için Modern Bekleme gerekir.** Güncel laptopların çoğu bunu kullanır (`powercfg /a` çıktısında "S0 Low Power Idle" yazmalı). Klasik S3 uykulu eski bilgisayarlarda yalnızca kapatma ve yeniden başlatma sayılır. 21:00'den sonra yeniden başlatma da hatırlatmayı tetikler, boşta ekranın kapanması tetiklemez.
-- **Gecikmeler ve atlanan akşamlar.** Kapanış hatırlatması genellikle 10-60 saniyede gelir. GitHub üç zamanlanmış çalışmanın hepsini 23:30'dan sonra başlatırsa o akşamki 22:00 hatırlatması gece gönderilmek yerine atlanır.
-- **Hareketsiz repolar.** GitHub, herkese açık repolarda 60 gün hareket olmazsa zamanlanmış işleri durdurur. `state` dalının günlük güncellemesi normalde repoyu hareketli tutar. Hatırlatmalar durursa işi Actions sekmesinden yeniden etkinleştir.
-- **Tek cihaz, tek not seti.** Notlar telefon ile bilgisayar arasında eşitlenmez.
-- **Süresi dolan abonelikler.** iOS aboneliği düşürürse (örneğin uygulama silinince) iş bunu bildirir. Uygulamada bildirimi kapatıp açarak yeni kodu yapıştır.
-
-## Yol haritası
-
-- **2. sürüm: telefon tetikleyicisi.** Bilgisayar akşam kullanılmadıysa ama telefon belirli bir saatten sonra aktifse aynı hatırlatma bir kez gelsin. Aynı işi `source: phone` ile çağıran bir iOS Kestirmeler otomasyonuyla planlanıyor; böylece günde bir kez kuralı yine geçerli olur.
-
-## Lisans
-
-[MIT Lisansı](LICENSE) ile yayınlanmıştır. Telif hakkı (c) 2026 Yıldırım Öztürk.
+├── kapanis.ps1             Uyku izleyicisi (SYSTEM) ve oturum kapatma betiği; yerel saati GitHub'a gönderir
