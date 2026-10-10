@@ -10,7 +10,7 @@
 
 **English** · [Türkçe](README.tr.md) · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-1.3.2-2c6a5d)
+![Version](https://img.shields.io/badge/version-1.4.0-2c6a5d)
 ![React](https://img.shields.io/badge/React-19.3-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-8.3-646cff)
@@ -39,7 +39,7 @@ flowchart LR
   Phone -- "tap" --> Note["Three boxes"]
 ```
 
-1. **Shutdown and sleep trigger.** Windows does not always log a shutdown event, and the last second before power-off is too short for a network request. So shutdown and restart are caught by a **logoff script** (local Group Policy): Windows runs it on every shutdown and restart and waits for it to finish. Sleep is caught by a scheduled task that listens for event 506 (entering Modern Standby), but only when the user starts it: closing the lid, the power or sleep button, or Start > Sleep. The screen turning off after idle time does not count. If it is after 21:00, the script calls the GitHub API once (about a second) and sends **the computer's local time with its UTC offset** (for example `2026-10-09T23:19:30+03:00`). GitHub decides by that time, not by when the request arrives, and ignores a request that is more than 90 minutes old.
+1. **Shutdown and sleep trigger.** Windows does not always log a shutdown event, and the last second before power-off is too short for a network request. So shutdown and restart are caught by a **logoff script** (local Group Policy): Windows runs it on every shutdown and restart and waits for it to finish. Sleep is caught by a small background **watcher** that starts at sign-in. Windows tells running programs when the screen turns off or the lid closes, before the computer sleeps; once Modern Standby has started, Windows does not start new programs until wake-up, so a task triggered by the sleep event would only run in the morning. The watcher sends right away when the lid closed or the keyboard or mouse was used in the last 30 seconds (Start > Sleep, power button). Otherwise it checks the sleep reason Windows logged, and the screen turning off after idle time does not count. A task on the sleep event (506) remains as a backup. If it is after 21:00, the script calls the GitHub API once (about a second) and sends **the computer's local time with its UTC offset** (for example `2026-10-09T23:19:30+03:00`). GitHub decides by that time, not by when the request arrives, and ignores a request that is more than 90 minutes old.
 2. **One sender.** All reminders are sent by a single GitHub Actions workflow. It checks the date stored on a separate `state` branch and only sends if nothing was sent this evening. Runs are serialized, so a shutdown and the 22:00 run can never both send.
 3. **22:00 safety net.** The workflow also runs on a schedule. If no reminder went out by 22:00 (for example, the computer was never switched on), it sends one. GitHub can start scheduled runs very late, sometimes hours, so there are three runs (21:40, 22:00, 22:20) and a scheduled run only sends between 22:00 and 23:30. A run that starts later does nothing, so a reminder never arrives in the middle of the night.
 4. **Web Push straight to the app.** The notification is a standard Web Push message signed with VAPID keys. Tapping it opens the note screen. A late-night evening lasts until 05:00, so a shutdown at 00:30 still counts for the day before.
@@ -113,7 +113,7 @@ src/
 └── push/send.mjs           Web Push sender
 pc/
 ├── kur.ps1                 Windows setup (task, encrypted token)
-├── kapanis.ps1             Logoff script and sleep task, sends the local time to GitHub
+├── kapanis.ps1             Watcher, logoff script and backup sleep task; sends the local time to GitHub
 └── kaldir.ps1              Uninstall
 push.config.json            Repository name and VAPID public key
 ```

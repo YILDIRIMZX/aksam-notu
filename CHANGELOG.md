@@ -6,6 +6,18 @@ Her güncelleme, neyin neden değiştiğiyle birlikte burada listelenir. En yeni
 
 ---
 
+## 1.4.0 (2026-10-10)
+
+**EN.** After putting the computer to sleep, the reminder only came when the computer was woken up. Once Modern Standby has started, Windows does not start new programs until wake-up, so the task triggered by the sleep event could only run then.
+- **Background watcher.** A small watcher starts at sign-in and runs without a window. Windows tells running programs when the screen turns off or the lid closes, before the computer sleeps, so the request now goes out in those seconds.
+- **Only when you put it to sleep.** It sends right away when the lid closed or the keyboard or mouse was used in the last 30 seconds (Start > Sleep, power button). Otherwise it checks the sleep reason Windows logged; the screen turning off after idle time does not count.
+- The sleep-event task stays as a backup. If it runs at wake-up, it does nothing when the evening was already handled or when it is morning.
+
+**TR.** Bilgisayar uykuya alındıktan sonra hatırlatma ancak bilgisayar uyandırılınca geliyordu. Modern Bekleme başladıktan sonra Windows uyanışa kadar yeni program başlatmıyor; uyku olayına bağlı görev de ancak o zaman çalışabiliyordu.
+- **Arka plan izleyicisi.** Oturum açılınca başlayan ve pencere açmadan çalışan küçük bir izleyici eklendi. Windows, ekran kapanırken ya da kapak kapanırken bunu çalışan programlara bilgisayar uyumadan önce bildiriyor; istek artık o saniyelerde gidiyor.
+- **Yalnızca sen uyuttuğunda.** Kapak kapandıysa ya da son 30 saniyede klavye veya fare kullanıldıysa (Başlat > Uyku, güç düğmesi) hemen gönderiyor. Aksi halde Windows'un yazdığı uyku nedenine bakıyor; boşta kalınca ekranın kapanması sayılmıyor.
+- Uyku olayına bağlı görev yedek olarak kalıyor. Uyanışta çalışırsa, o akşam zaten halledildiyse ya da sabahsa hiçbir şey yapmıyor.
+
 ## 1.3.2 (2026-10-10)
 
 **EN.** Putting the computer to sleep sent nothing. Windows logged the sleep with reason 11 ("screen off request"), which some computers write for the sleep menu and buttons, and the task only listened for lid, power button, sleep button and Start > Sleep (15, 1, 14, 20). Reason 11 now counts too. The screen turning off after idle time (12) still does not.

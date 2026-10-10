@@ -38,6 +38,8 @@ if (Test-Path $ini) {
   gpupdate /target:user /force | Out-Null
 }
 
+Stop-ScheduledTask -TaskName 'Akşam Notu izleyici' -ErrorAction SilentlyContinue
+Unregister-ScheduledTask -TaskName 'Akşam Notu izleyici' -Confirm:$false -ErrorAction SilentlyContinue
 Unregister-ScheduledTask -TaskName 'Akşam Notu' -Confirm:$false -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force (Join-Path $env:ProgramData 'AksamNotu'), (Join-Path $env:LOCALAPPDATA 'AksamNotu') -ErrorAction SilentlyContinue
 Write-Host 'Akşam Notu bilgisayardan kaldırıldı. GitHub token''ını GitHub ayarlarından da silmeyi unutma.' -ForegroundColor Green
