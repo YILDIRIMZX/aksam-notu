@@ -166,8 +166,9 @@ Register-ScheduledTask -TaskName $taskName -Xml $xml -Force | Out-Null
 
 # --- Doğrulama ---
 $logoffKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Logoff'
+# Yalnızca Parameters okunur: Windows aynı anahtarda PowerShell'in çeviremediği bir ExecTime değeri tutuyor.
 $logoffOk = Get-ChildItem $logoffKey -Recurse -ErrorAction SilentlyContinue |
-  Where-Object { (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).Parameters -match 'AksamNotu' }
+  Where-Object { "$((Get-Item $_.PSPath).GetValue('Parameters'))" -match 'AksamNotu' }
 
 Write-Host ''
 Write-Host "Kuruldu. $($StartHour):00'dan sonra bilgisayarı kapatınca, yeniden başlatınca ya da uykuya alınca (kapak) telefona hatırlatma gidecek." -ForegroundColor Green
