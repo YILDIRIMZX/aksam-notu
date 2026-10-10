@@ -6,6 +6,22 @@ Her güncelleme, neyin neden değiştiğiyle birlikte burada listelenir. En yeni
 
 ---
 
+## 1.3.0 (2026-10-10)
+
+**EN.** Reminders came at the wrong time: at 02:32 and 03:12 instead of the evening, and a shutdown sent nothing.
+- **No more night-time reminders.** GitHub started the 22:00 scheduled run four to five hours late. The wait step then misread the time, waited for the next evening, timed out, and the send step still ran. Now a scheduled run only sends between 22:00 and 23:30, a cancelled wait never leads to a send, and there are three scheduled runs (21:40, 22:00, 22:20) for a better chance of one starting on time.
+- **The computer sends its own time.** Each request carries the computer's local time with its UTC offset (for example `2026-10-09T23:19:30+03:00`). GitHub decides by that time, not by when the request arrives, and ignores a request that waited more than 90 minutes.
+- **Shutdowns are caught reliably.** Windows did not log the shutdown event on these evenings, and the last second before power-off is too short for a network request. Shutdown and restart are now caught by a logoff script (local Group Policy), which Windows runs on every shutdown and waits for. Sleep is still caught by the event task, which now runs under the user's own account.
+- **Token stored per user.** The token is now encrypted for the user's Windows account and kept in the user's profile. Setup upgrades an earlier installation and keeps its token.
+- The decision rules moved into `.github/push/decide.mjs`, with tests in `decide.test.mjs` covering the late-schedule case.
+
+**TR.** Hatırlatmalar yanlış saatte geliyordu: akşam yerine 02:32'de ve 03:12'de; bilgisayarı kapatmak ise hiçbir şey göndermiyordu.
+- **Artık gece hatırlatması yok.** GitHub 22:00 zamanlanmış işini dört beş saat geç başlattı. Bekleme adımı saati yanlış okuyup bir sonraki akşamı beklemeye başladı, zaman aşımına uğradı ve gönderme adımı yine de çalıştı. Artık zamanlanmış bir çalışma yalnızca 22:00 ile 23:30 arasında gönderiyor, iptal edilen bir bekleme asla gönderime yol açmıyor ve birinin zamanında başlaması için üç zamanlanmış çalışma var (21:40, 22:00, 22:20).
+- **Bilgisayar kendi saatini gönderiyor.** Her istek bilgisayarın yerel saatini UTC farkıyla birlikte taşıyor (ör. `2026-10-09T23:19:30+03:00`). GitHub kararı isteğin ulaştığı ana göre değil bu saate göre veriyor ve 90 dakikadan fazla bekleyen bir isteği yok sayıyor.
+- **Kapanışlar güvenilir şekilde yakalanıyor.** Windows bu akşamlarda kapanış olayını yazmadı ve kapanmadan önceki son saniye bir ağ isteği için çok kısa. Kapatma ve yeniden başlatmayı artık Windows'un her kapanışta çalıştırıp bitmesini beklediği bir oturum kapatma betiği (yerel Grup İlkesi) yakalıyor. Uykuyu yine olay görevi yakalıyor; görev artık kullanıcının kendi hesabıyla çalışıyor.
+- **Token kullanıcıya özel saklanıyor.** Token artık kullanıcının Windows hesabına göre şifrelenip kullanıcının profil klasöründe tutuluyor. Kurulum önceki kurulumu yükseltiyor ve token'ını koruyor.
+- Karar kuralları `.github/push/decide.mjs` dosyasına taşındı; geç zamanlama durumunu da kapsayan testler `decide.test.mjs` içinde.
+
 ## 1.2.0 (2026-10-08)
 
 **EN.** A shorter notification and privacy measures.

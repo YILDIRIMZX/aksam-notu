@@ -4,9 +4,11 @@ name: Evening reminder
 
 on:
   schedule:
-    # 21:40 in Istanbul (UTC+3, no daylight saving). Scheduled runs often start late,
-    # so the job starts early and waits until 22:00 itself.
+    # 21:40, 22:00 and 22:20 in Istanbul (UTC+3, no daylight saving). GitHub can start scheduled
+    # runs very late, so there are three chances, and a run only sends between 22:00 and 23:30.
     - cron: '40 18 * * *'
+    - cron: '0 19 * * *'
+    - cron: '20 19 * * *'
   workflow_dispatch:
     inputs:
       source:
@@ -14,6 +16,10 @@ on:
         type: choice
         options: [manual, pc, phone]
         default: manual
+      at:
+        description: The device's local time with its UTC offset, e.g. 2026-10-09T23:19:30+03:00
+        type: string
+        default: ''
       test:
         description: Send now and ignore the time window and the once-a-day rule
         type: boolean
@@ -29,20 +35,21 @@ jobs:
   wait:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
     steps:
       - name: Wait until 22:00
         run: |
-          target=$(date -d 'today 22:00' +%s)
-          now=$(date +%s)
-          if [ "$now" -lt "$target" ]; then
-            echo "Waiting $(( target - now )) seconds"
-            sleep $(( target - now ))
+          # Only an early start (21:00-21:59) waits. A late start never waits for the next evening.
+          if [ "$(( 10#$(date +%H) ))" -eq 21 ]; then
+            wait=$(( $(date -d 'today 22:00' +%s) - $(date +%s) ))
+            echo "Waiting $wait seconds"
+            sleep "$wait"
           fi
 
   send:
     needs: wait
-    if: ${{ !cancelled() && needs.wait.result != 'failure' }}
+    # A cancelled or timed-out wait must never lead to a send.
+    if: ${{ !cancelled() && (needs.wait.result == 'success' || needs.wait.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # One run at a time, so a shutdown and the 22:00 run can never both send.
@@ -56,28 +63,13 @@ jobs:
         id: decide
         env:
           SOURCE: ${{ inputs.source || 'schedule' }}
+          AT: ${{ inputs.at }}
           TEST: ${{ inputs.test || false }}
           START_HOUR: ${{ vars.START_HOUR || '21' }}
         run: |
-          # An evening lasts until 05:00, so a shutdown at 00:30 still counts for the day before.
-          evening=$(date -d '5 hours ago' +%F)
-          hour=$(( 10#$(date +%H) ))
-          last=$(git fetch -q origin state 2>/dev/null && git show FETCH_HEAD:last-sent.txt 2>/dev/null || echo none)
-          echo "evening=$evening" >> "$GITHUB_OUTPUT"
-          # The repository is public, so the log says only what was decided, never who triggered it or when.
-
-          if [ "$TEST" = "true" ]; then
-            echo "Test run: sending without recording."
-            echo "send=true" >> "$GITHUB_OUTPUT"
-          elif [ "$last" = "$evening" ]; then
-            echo "Already sent this evening. Nothing to do."
-            echo "send=false" >> "$GITHUB_OUTPUT"
-          elif [ "$SOURCE" != "schedule" ] && [ "$hour" -lt "$START_HOUR" ] && [ "$hour" -ge 5 ]; then
-            echo "Outside the evening window. Nothing to do."
-            echo "send=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "send=true" >> "$GITHUB_OUTPUT"
-          fi
+          # Rules live in decide.mjs (tested in decide.test.mjs). The log states only the decision.
+          export LAST=$(git fetch -q origin state 2>/dev/null && git show FETCH_HEAD:last-sent.txt 2>/dev/null || echo none)
+          node .github/push/decide.mjs
 
       - if: steps.decide.outputs.send == 'true'
         uses: actions/setup-node@v4
