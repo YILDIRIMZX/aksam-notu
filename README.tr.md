@@ -10,7 +10,7 @@
 
 [English](README.md) · **Türkçe** · [Русский](README.ru.md)
 
-![Sürüm](https://img.shields.io/badge/version-2.0.0-2c6a5d)
+![Sürüm](https://img.shields.io/badge/version-2.1.0-2c6a5d)
 ![React](https://img.shields.io/badge/React-19.3-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-8.3-646cff)
@@ -32,13 +32,14 @@ Bilerek sessiz tasarlandı. **Seri tutma, puan, uyarı ya da suçlayıcı mesaj 
 
 ```mermaid
 flowchart LR
-  Cron["GitHub zamanlayıcısı<br/>22:00-24:00 arası altı çalışma"] --> GA
+  Ext["cron-job.org<br/>her gün 22:01"] -- "workflow_dispatch" --> GA
+  Cron["GitHub zamanlayıcısı<br/>yedek, altı çalışma"] --> GA
   GA["GitHub Actions<br/>reminder.yml<br/>bu akşam gönderildi mi?"] -- "Web Push · VAPID" --> Phone["iPhone<br/>ana ekran uygulaması"]
   GA -. "tarih" .-> State[("state dalı<br/>last-sent.txt")]
   Phone -- "dokun" --> Note["Üç kutu"]
 ```
 
-1. **Günlük zamanlama.** Bir GitHub Actions işi her akşam altı kez çalışır (İstanbul saatiyle 22:04, 22:19, 22:37, 22:52, 23:13, 23:34). Dakikalar bilerek tam saatten kaydırıldı, çünkü GitHub en yoğun ve en sık geciktiği an tam saat başlarıdır.
+1. **Günlük tetikleyici.** Her akşam 22:01'de ücretsiz bir dış zamanlayıcı ([cron-job.org](https://cron-job.org)) işi GitHub API'si üzerinden başlatır (`source: cron` ile `workflow_dispatch`). GitHub'ın kendi zamanlayıcısı çalışmaları üç beş saat geç başlattığı için yalnızca yedek olarak kalıyor: 22:04 ile 23:34 arasında, tam saatten kaydırılmış altı çalışma.
 2. **Akşamda bir kez, asla gece değil.** Her çalışma ayrı bir `state` dalında tutulan tarihe bakar ve yalnızca bu akşamki hatırlatma henüz gitmediyse gönderir. Çalışmalar sırayla yürür, bu yüzden iki çalışma asla ikisi birden göndermez. GitHub zamanlanmış işleri bazen saatlerce geç başlattığı için bir çalışma yalnızca 22:00 ile gece yarısı arasında gönderir; daha geç başlayan çalışma hiçbir şey yapmaz.
 3. **Doğrudan uygulamaya Web Push.** Bildirim, VAPID anahtarlarıyla imzalanmış standart bir Web Push mesajıdır. Dokununca not ekranı açılır.
 
@@ -70,7 +71,8 @@ Bir GitHub hesabı ve iOS 16.4 veya üstü bir iPhone (ya da Web Push destekleye
 1. **Repo ve Pages.** Herkese açık bir repo oluştur, projeyi gönder, sonra **Settings > Pages > Source** ayarını **GitHub Actions** yap.
 2. **VAPID anahtarları.** `npx web-push generate-vapid-keys` çalıştır. Açık anahtarı ve `sahip/repo` adını [`push.config.json`](push.config.json) dosyasına yaz; özel anahtarı **`VAPID_PRIVATE_KEY`** adlı Actions gizli değeri olarak kaydet (**Settings > Secrets and variables > Actions**).
 3. **Telefon.** Siteyi Safari'de aç, **Paylaş > Ana Ekrana Ekle**'yi seç, uygulamayı ana ekrandan aç, **Bildirim**'e gir ve **Bildirimleri aç**'a dokun. Gösterilen kodu kopyalayıp **`PUSH_SUBSCRIPTIONS`** gizli değeri olarak kaydet. Birden fazla cihaz için kodları bir JSON dizisinde birleştir.
-4. **Test.** **Actions > Evening reminder > Run workflow**'u "test" işaretli başlat. Hatırlatma bir dakika içinde gelmeli.
+4. **Dış tetikleyici.** Yalnızca bu repoya erişen ve **Actions: Read and write** iznine sahip bir [ince ayarlı token](https://github.com/settings/personal-access-tokens/new) oluştur. [cron-job.org](https://cron-job.org)'da her gün 22:01'de (saat dilimi Europe/Istanbul) çalışan bir iş kur: POST https://api.github.com/repos/<sahip>/<repo>/actions/workflows/reminder.yml/dispatches adresine Authorization: Bearer <token>, Accept: application/vnd.github+json ve Content-Type: application/json başlıklarıyla {"ref":"main","inputs":{"source":"cron"}} gövdesini göndersin. Çalıştıysa GitHub 204 yanıtı verir.
+5. **Test.** **Actions > Evening reminder > Run workflow**'u "test" işaretli başlat. Hatırlatma bir dakika içinde gelmeli.
 
 ## Teknoloji
 
@@ -114,7 +116,7 @@ push.config.json            Repo adı, VAPID açık anahtarı, hatırlatma metni
 
 ## Sınırlamalar
 
-- **GitHub'ın zamanlaması tam değildir.** Hatırlatma genellikle 22:00'den birkaç dakika sonra gelir. GitHub altı çalışmanın hepsini gece yarısından sonra başlatırsa o akşamki hatırlatma gece gönderilmek yerine atlanır.
+- **Dış tetikleyiciye bağlı.** cron-job.org çalışmazsa ve GitHub'ın yedek çalışmaları da gece yarısından sonra başlarsa o akşamki hatırlatma gece gönderilmek yerine atlanır. cron-job.org bir iş başarısız olunca e-posta gönderebilir.
 - **Hareketsiz repolar.** GitHub, herkese açık repolarda 60 gün hareket olmazsa zamanlanmış işleri durdurur. `state` dalının günlük güncellemesi normalde repoyu hareketli tutar. Hatırlatmalar durursa işi Actions sekmesinden yeniden etkinleştir.
 - **Tek cihaz, tek not seti.** Notlar cihazlar arasında eşitlenmez.
 - **Süresi dolan abonelikler.** iOS aboneliği düşürürse (örneğin uygulama silinince) iş bunu bildirir. Uygulamada bildirimi kapatıp açarak yeni kodu yapıştır.

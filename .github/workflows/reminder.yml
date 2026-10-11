@@ -1,5 +1,6 @@
 # Sends the evening reminder once every evening after 22:00 (Istanbul time).
-# GitHub may start scheduled runs late, so there are several runs. Each one sends only between 22:00 and midnight
+# The main trigger is an external cron service (cron-job.org) that calls workflow_dispatch with source=cron at 22:01,
+# because GitHub's own schedule can start hours late. The scheduled runs below stay as a backup. Each one sends only between 22:00 and midnight
 # and only if tonight's reminder has not gone out yet, so the reminder comes once and never in the middle of the night.
 name: Evening reminder
 
@@ -18,7 +19,7 @@ on:
       source:
         description: Who asked for the reminder
         type: choice
-        options: [manual, phone]
+        options: [manual, cron, phone]
         default: manual
       at:
         description: The device's local time with its UTC offset, e.g. 2026-10-09T23:19:30+03:00 (optional)

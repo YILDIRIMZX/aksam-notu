@@ -1,5 +1,5 @@
 // Decides whether the evening reminder should be sent now.
-// Env: SOURCE (schedule | manual | phone), AT (optional: the device's local time with its UTC offset,
+// Env: SOURCE (schedule | cron | manual | phone; cron = external scheduler, same rules as schedule), AT (optional: the device's local time with its UTC offset,
 // e.g. 2026-10-09T23:19:30+03:00), TEST, START_HOUR, LAST (evening of the last reminder), NOW (tests only).
 // Writes evening=… and send=… to $GITHUB_OUTPUT. The log states only the decision: the repository is public.
 import { appendFileSync } from 'node:fs'
@@ -61,7 +61,7 @@ export function decide({ source = 'schedule', at = '', test = false, startHour =
   } else if (last === eveningKey) {
     send = false
     reason = 'Already sent this evening.'
-  } else if (source === 'schedule') {
+  } else if (source === 'schedule' || source === 'cron') {
     if (minuteOfDay < SCHEDULE_FROM || minuteOfDay >= SCHEDULE_UNTIL) {
       send = false
       reason = 'Scheduled run started outside 22:00-24:00 (GitHub was late or early). Skipping.'

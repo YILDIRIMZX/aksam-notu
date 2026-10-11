@@ -6,6 +6,18 @@ Her güncelleme, neyin neden değiştiğiyle birlikte burada listelenir. En yeni
 
 ---
 
+## 2.1.0 (2026-10-11)
+
+**EN.** On the first evening with only GitHub's schedule, no reminder came: by 22:51 none of the runs had started, and earlier nights show GitHub starting this repository's scheduled runs three to five hours late.
+- **External trigger.** A free external scheduler (cron-job.org) now starts the workflow every evening at 22:01 through the GitHub API, with the new source `cron`. It follows the same rules as the schedule: only between 22:00 and midnight, once per evening.
+- GitHub's own schedule stays as a backup. If both run, the once-per-evening check makes sure only one reminder arrives.
+- Setup now includes creating the token and the cron-job.org job.
+
+**TR.** Yalnızca GitHub zamanlayıcısıyla geçen ilk akşam hatırlatma gelmedi: 22:51'e kadar çalışmaların hiçbiri başlamamıştı. Önceki geceler de GitHub'ın bu repodaki zamanlanmış işleri üç beş saat geç başlattığını gösteriyor.
+- **Dış tetikleyici.** Ücretsiz bir dış zamanlayıcı (cron-job.org) artık işi her akşam 22:01'de GitHub API'si üzerinden, yeni `cron` kaynağıyla başlatıyor. Zamanlamayla aynı kurallara uyuyor: yalnızca 22:00 ile gece yarısı arasında ve akşamda bir kez.
+- GitHub'ın kendi zamanlayıcısı yedek olarak kalıyor. İkisi birden çalışırsa "akşamda bir kez" kontrolü yalnızca bir hatırlatmanın gelmesini sağlıyor.
+- Kurulum artık token'ı ve cron-job.org işini oluşturmayı da içeriyor.
+
 ## 2.0.0 (2026-10-11)
 
 **EN.** The computer trigger is gone. The reminder now simply comes to the phone once every evening after 22:00. Catching shutdown and sleep reliably on Windows turned out to need a logoff script, a SYSTEM watcher and a machine-wide copy of the token, which is a lot of machinery on the computer for one evening reminder.

@@ -10,7 +10,7 @@
 
 **English** · [Türkçe](README.tr.md) · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-2.0.0-2c6a5d)
+![Version](https://img.shields.io/badge/version-2.1.0-2c6a5d)
 ![React](https://img.shields.io/badge/React-19.3-149eca)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)
 ![Vite](https://img.shields.io/badge/Vite-8.3-646cff)
@@ -32,13 +32,14 @@ It is deliberately quiet. There are **no streaks, scores, warnings or guilt-indu
 
 ```mermaid
 flowchart LR
-  Cron["GitHub schedule<br/>six runs between 22:00 and 24:00"] --> GA
+  Ext["cron-job.org<br/>every day 22:01"] -- "workflow_dispatch" --> GA
+  Cron["GitHub schedule<br/>backup, six runs"] --> GA
   GA["GitHub Actions<br/>reminder.yml<br/>sent this evening?"] -- "Web Push · VAPID" --> Phone["iPhone<br/>Home Screen app"]
   GA -. "date" .-> State[("state branch<br/>last-sent.txt")]
   Phone -- "tap" --> Note["Three boxes"]
 ```
 
-1. **A daily schedule.** A GitHub Actions workflow runs six times every evening (22:04, 22:19, 22:37, 22:52, 23:13, 23:34, Istanbul time). The minutes are off the full hour on purpose, because GitHub is busiest and most often late at the top of the hour.
+1. **A daily trigger.** Every evening at 22:01, a free external scheduler ([cron-job.org](https://cron-job.org)) starts the workflow through the GitHub API (`workflow_dispatch` with `source: cron`). GitHub's own schedule turned out to start runs three to five hours late, so it only stays as a backup: six runs between 22:04 and 23:34, off the full hour.
 2. **Once per evening, never at night.** Each run checks the date stored on a separate `state` branch and sends only if tonight's reminder has not gone out yet. Runs are serialized, so two runs can never both send. GitHub sometimes starts scheduled runs hours late, so a run sends only between 22:00 and midnight; a run that starts later does nothing.
 3. **Web Push straight to the app.** The notification is a standard Web Push message signed with VAPID keys. Tapping it opens the note screen.
 
@@ -70,7 +71,8 @@ You need a GitHub account and an iPhone with iOS 16.4 or later (or any browser w
 1. **Repository and Pages.** Create a public repository, push this project, then set **Settings > Pages > Source** to **GitHub Actions**.
 2. **VAPID keys.** Run `npx web-push generate-vapid-keys`. Put the public key and your `owner/repo` into [`push.config.json`](push.config.json), and save the private key as the Actions secret **`VAPID_PRIVATE_KEY`** (**Settings > Secrets and variables > Actions**).
 3. **Phone.** Open the site in Safari, choose **Share > Add to Home Screen**, open the app from the Home Screen, go to **Bildirim** and tap **Bildirimleri aç**. Copy the code it shows and save it as the secret **`PUSH_SUBSCRIPTIONS`**. To add more devices, combine their codes into a JSON array.
-4. **Test.** Start **Actions > Evening reminder > Run workflow** with "test" checked. The reminder should arrive within a minute.
+4. **External trigger.** Create a [fine-grained token](https://github.com/settings/personal-access-tokens/new) for this repository only with **Actions: Read and write**. At [cron-job.org](https://cron-job.org), create a job that runs every day at 22:01 (time zone Europe/Istanbul) and sends POST https://api.github.com/repos/<owner>/<repo>/actions/workflows/reminder.yml/dispatches with the headers Authorization: Bearer <token>, Accept: application/vnd.github+json and Content-Type: application/json, and the body {"ref":"main","inputs":{"source":"cron"}}. GitHub answers 204 when it worked.
+5. **Test.** Start **Actions > Evening reminder > Run workflow** with "test" checked. The reminder should arrive within a minute.
 
 ## Tech stack
 
@@ -114,7 +116,7 @@ push.config.json            Repository name, VAPID public key, reminder text
 
 ## Limitations
 
-- **GitHub's schedule is not exact.** The reminder usually arrives a few minutes after 22:00. If GitHub starts all six runs after midnight, that evening's reminder is skipped rather than sent at night.
+- **Depends on the external trigger.** If cron-job.org is down and GitHub's backup runs also start after midnight, that evening's reminder is skipped rather than sent at night. cron-job.org can e-mail you when a job fails.
 - **Inactive repositories.** GitHub pauses scheduled workflows in public repositories after 60 days without activity. The daily update of the `state` branch normally keeps it active. If reminders stop, re-enable the workflow in the Actions tab.
 - **One device, one set of notes.** Notes are not synced between devices.
 - **Expired subscriptions.** If iOS drops the subscription (for example after removing the app), the workflow reports it. Turn notifications off and on in the app and paste the new code.
