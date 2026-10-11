@@ -6,6 +6,18 @@ Her güncelleme, neyin neden değiştiğiyle birlikte burada listelenir. En yeni
 
 ---
 
+## 2.0.0 (2026-10-11)
+
+**EN.** The computer trigger is gone. The reminder now simply comes to the phone once every evening after 22:00. Catching shutdown and sleep reliably on Windows turned out to need a logoff script, a SYSTEM watcher and a machine-wide copy of the token, which is a lot of machinery on the computer for one evening reminder.
+- **Removed:** the `pc/` folder (setup, watcher, logoff script and uninstaller). Anyone who installed an earlier version can remove it with `pc\kaldir.ps1` from version 1.5.0. No token is needed on the computer anymore.
+- **Six evening runs.** The schedule runs at 22:04, 22:19, 22:37, 22:52, 23:13 and 23:34, off the full hour because GitHub is most often late at the top of the hour. The first run that starts between 22:00 and midnight sends the reminder; the others see that it already went out. A run that starts after midnight does nothing.
+- The workflow no longer needs a wait step. It still accepts a `phone` source and a device time for a future phone trigger.
+
+**TR.** Bilgisayar tetikleyicisi kaldırıldı. Hatırlatma artık her akşam 22:00'den sonra telefona bir kez geliyor, o kadar. Windows'ta kapanışı ve uykuyu güvenilir şekilde yakalamak bir oturum kapatma betiği, bir SYSTEM izleyicisi ve token'ın makine çapında bir kopyasını gerektirdi; tek bir akşam hatırlatması için bilgisayarda bu kadar düzenek fazla.
+- **Kaldırılanlar:** `pc/` klasörü (kurulum, izleyici, oturum kapatma betiği ve kaldırıcı). Önceki bir sürümü kuran, 1.5.0 sürümündeki `pc\kaldir.ps1` ile kaldırabilir. Bilgisayarda artık hiçbir token gerekmiyor.
+- **Akşamda altı çalışma.** Zamanlama 22:04, 22:19, 22:37, 22:52, 23:13 ve 23:34'te çalışıyor; GitHub en sık tam saat başlarında geciktiği için dakikalar kaydırıldı. 22:00 ile gece yarısı arasında başlayan ilk çalışma hatırlatmayı gönderiyor, diğerleri gönderildiğini görüyor. Gece yarısından sonra başlayan çalışma hiçbir şey yapmıyor.
+- İşin artık bekleme adımına ihtiyacı yok. İleride bir telefon tetikleyicisi için `phone` kaynağını ve cihaz saatini kabul etmeye devam ediyor.
+
 ## 1.5.0 (2026-10-10)
 
 **EN.** The 1.4.0 watcher noticed the sleep at the right second, but Windows froze it in the middle of the request, and the reminder still only arrived at wake-up. In Modern Standby, programs in the user's session are frozen within the first seconds of sleep; system processes are not.

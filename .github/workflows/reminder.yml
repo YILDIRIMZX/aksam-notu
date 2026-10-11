@@ -1,23 +1,27 @@
-# Sends the evening reminder at most once per evening.
-# Triggered by the computer shutting down (source: pc), by the 22:00 schedule, or by hand.
+# Sends the evening reminder once every evening after 22:00 (Istanbul time).
+# GitHub may start scheduled runs late, so there are several runs. Each one sends only between 22:00 and midnight
+# and only if tonight's reminder has not gone out yet, so the reminder comes once and never in the middle of the night.
 name: Evening reminder
 
 on:
   schedule:
-    # 21:40, 22:00 and 22:20 in Istanbul (UTC+3, no daylight saving). GitHub can start scheduled
-    # runs very late, so there are three chances, and a run only sends between 22:00 and 23:30.
-    - cron: '40 18 * * *'
-    - cron: '0 19 * * *'
-    - cron: '20 19 * * *'
+    # 22:04, 22:19, 22:37, 22:52, 23:13 and 23:34 in Istanbul (UTC+3, no daylight saving).
+    # Minutes off the full hour, because GitHub is busiest (and most often late) at the top of the hour.
+    - cron: '4 19 * * *'
+    - cron: '19 19 * * *'
+    - cron: '37 19 * * *'
+    - cron: '52 19 * * *'
+    - cron: '13 20 * * *'
+    - cron: '34 20 * * *'
   workflow_dispatch:
     inputs:
       source:
         description: Who asked for the reminder
         type: choice
-        options: [manual, pc, phone]
+        options: [manual, phone]
         default: manual
       at:
-        description: The device's local time with its UTC offset, e.g. 2026-10-09T23:19:30+03:00
+        description: The device's local time with its UTC offset, e.g. 2026-10-09T23:19:30+03:00 (optional)
         type: string
         default: ''
       test:
@@ -32,27 +36,10 @@ env:
   TZ: Europe/Istanbul
 
 jobs:
-  wait:
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Wait until 22:00
-        run: |
-          # Only an early start (21:00-21:59) waits. A late start never waits for the next evening.
-          if [ "$(( 10#$(date +%H) ))" -eq 21 ]; then
-            wait=$(( $(date -d 'today 22:00' +%s) - $(date +%s) ))
-            echo "Waiting $wait seconds"
-            sleep "$wait"
-          fi
-
   send:
-    needs: wait
-    # A cancelled or timed-out wait must never lead to a send.
-    if: ${{ !cancelled() && (needs.wait.result == 'success' || needs.wait.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # One run at a time, so a shutdown and the 22:00 run can never both send.
+    # One run at a time, so two scheduled runs can never both send.
     concurrency:
       group: reminder
       cancel-in-progress: false
@@ -62,10 +49,9 @@ jobs:
       - name: Decide
         id: decide
         env:
-          SOURCE: ${{ inputs.source || 'schedule' }}
+          SOURCE: ${{ github.event_name == 'schedule' && 'schedule' || inputs.source || 'manual' }}
           AT: ${{ inputs.at }}
           TEST: ${{ inputs.test || false }}
-          START_HOUR: ${{ vars.START_HOUR || '21' }}
         run: |
           # Rules live in decide.mjs (tested in decide.test.mjs). The log states only the decision.
           export LAST=$(git fetch -q origin state 2>/dev/null && git show FETCH_HEAD:last-sent.txt 2>/dev/null || echo none)

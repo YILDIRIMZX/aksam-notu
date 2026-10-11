@@ -1,5 +1,5 @@
 // Decides whether the evening reminder should be sent now.
-// Env: SOURCE (schedule | pc | phone | manual), AT (the device's local time with its UTC offset,
+// Env: SOURCE (schedule | manual | phone), AT (optional: the device's local time with its UTC offset,
 // e.g. 2026-10-09T23:19:30+03:00), TEST, START_HOUR, LAST (evening of the last reminder), NOW (tests only).
 // Writes evening=… and send=… to $GITHUB_OUTPUT. The log states only the decision: the repository is public.
 import { appendFileSync } from 'node:fs'
@@ -8,9 +8,9 @@ import { appendFileSync } from 'node:fs'
 const ROLLOVER_HOUR = 5
 /** A request that waited longer than this in GitHub's queue is no longer an evening reminder. */
 const MAX_AGE_MIN = 90
-/** Scheduled runs only send in this window; GitHub sometimes starts them hours late. */
+/** Scheduled runs only send between 22:00 and midnight; GitHub sometimes starts them hours late. */
 const SCHEDULE_FROM = 22 * 60
-const SCHEDULE_UNTIL = 23 * 60 + 30
+const SCHEDULE_UNTIL = 24 * 60
 const FALLBACK_ZONE = 'Europe/Istanbul'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -64,7 +64,7 @@ export function decide({ source = 'schedule', at = '', test = false, startHour =
   } else if (source === 'schedule') {
     if (minuteOfDay < SCHEDULE_FROM || minuteOfDay >= SCHEDULE_UNTIL) {
       send = false
-      reason = 'Scheduled run started outside 22:00-23:30 (GitHub was late or early). Skipping.'
+      reason = 'Scheduled run started outside 22:00-24:00 (GitHub was late or early). Skipping.'
     }
   } else if ((nowMs - instantMs) / 60_000 > MAX_AGE_MIN) {
     send = false
