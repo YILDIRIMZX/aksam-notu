@@ -22,16 +22,18 @@ self.addEventListener('push', (event) => {
   } catch {
     // Plain-text or empty payloads fall back to the default reminder.
   }
-  event.waitUntil(
-    self.registration.showNotification(data.title || FALLBACK.title, {
-      body: data.body || FALLBACK.body,
-      icon: 'pwa-192.png',
-      badge: 'pwa-192.png',
-      // The same tag replaces an earlier reminder instead of stacking a second one.
-      tag: 'aksam-notu',
-      data: { url: self.registration.scope },
-    }),
-  )
+  const options: NotificationOptions = {
+    body: data.body || FALLBACK.body,
+    icon: 'pwa-192.png',
+    badge: 'pwa-192.png',
+    data: { url: self.registration.scope },
+  }
+
+  // No tag: a notification with the same tag would silently replace the old one, so a notification from the evening might not appear.
+  // Every reminder without a tag appears separately and is always visible.
+  // The cost: if not cleared, they accumulate in the Notification Center. Since there is only one per day, we accept this.
+
+  event.waitUntil(self.registration.showNotification(data.title || FALLBACK.title, options))
 })
 
 self.addEventListener('notificationclick', (event) => {

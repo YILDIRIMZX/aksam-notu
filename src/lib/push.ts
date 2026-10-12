@@ -55,6 +55,5 @@ export async function showTestNotification() {
   await reg.showNotification(config.reminder.title, {
     body: config.reminder.body,
     icon: 'pwa-192.png',
-    tag: 'aksam-notu',
   })
 }

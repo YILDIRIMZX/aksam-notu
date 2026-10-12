@@ -6,6 +6,16 @@ Her güncelleme, neyin neden değiştiğiyle birlikte burada listelenir. En yeni
 
 ---
 
+## 2.2.0 (2026-10-12)
+
+**EN.** A reminder could arrive without ever showing up.
+- **Fresh subscription.** The cron run on 2026-10-11 logged "Device 1: delivered", yet nothing appeared on the phone. The push subscription stored in GitHub was out of date: Apple accepted messages for the old address and dropped them. Pasting the app's current setup code into `PUSH_SUBSCRIPTIONS` fixed it. No code change was needed for this, but it is worth knowing: if reminders stop while the log still says "delivered", refresh the subscription first.
+- **No notification tag.** Every reminder used the same `tag`, so a new one silently replaced an older one still in Notification Center: no banner, no sound. Reminders now have no tag, so each one appears on its own. The cost is that uncleared reminders pile up, which is acceptable at one per day. The test notification in the app follows the same rule. This decision was written by the project owner.
+
+**TR.** Bir hatırlatma hiç görünmeden gelebiliyordu.
+- **Taze abonelik.** 2026-10-11'deki cron çalışması "Device 1: delivered" yazdı, ama telefonda hiçbir şey görünmedi. GitHub'da kayıtlı bildirim aboneliği eskimişti: Apple eski adrese gelen mesajları kabul edip kaybediyordu. Uygulamanın güncel kurulum kodunu `PUSH_SUBSCRIPTIONS`'a yapıştırmak sorunu çözdü. Bunun için kod değişikliği gerekmedi, ama bilmekte fayda var: kayıt "delivered" dediği halde hatırlatmalar gelmiyorsa önce aboneliği tazele.
+- **Bildirim etiketi yok.** Her hatırlatma aynı `tag`'i kullanıyordu; bu yüzden yenisi, Bildirim Merkezi'nde duran eskisinin yerine sessizce geçiyordu: afiş yok, ses yok. Hatırlatmaların artık etiketi yok, her biri ayrı görünüyor. Bedeli, silinmeyen hatırlatmaların birikmesi; günde bir tane olduğu için kabul edilebilir. Uygulamadaki deneme bildirimi de aynı kurala uyuyor. Bu kararı proje sahibi yazdı.
+
 ## 2.1.0 (2026-10-11)
 
 **EN.** On the first evening with only GitHub's schedule, no reminder came: by 22:51 none of the runs had started, and earlier nights show GitHub starting this repository's scheduled runs three to five hours late.
